@@ -2,15 +2,16 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Football Pro Full Screen ⚽</title>
+<title>Real Football ⚽</title>
 
 <style>
 body {
   margin: 0;
   overflow: hidden;
-  background: black;
+  background: #0b5d1e;
   font-family: Arial;
 }
+
 canvas {
   display: block;
 }
@@ -34,22 +35,21 @@ resize();
 window.addEventListener("resize", resize);
 
 // ⚽ joueur
-let player = {x:100, y:200, speed:6};
+let player = {x:150, y:200, speed:5, vx:0, vy:0};
 
-// ⚽ balle
-let ball = {x:120, y:200};
+// ⚽ balle réaliste
+let ball = {x:200, y:200, vx:0, vy:0, friction:0.98};
 let owned = true;
-let ballSpeedX = 0;
 
 // 🤖 ennemis
 let enemies = [
-  {x:500,y:200},
-  {x:600,y:300},
+  {x:600,y:200},
+  {x:650,y:350},
   {x:700,y:150}
 ];
 
 // 🥅 but
-let goal = {x:window.innerWidth-40, y:200, w:20, h:150};
+let goal = {x:canvas.width-30, y:canvas.height/2-80, w:20, h:160};
 
 let score = 0;
 
@@ -58,9 +58,10 @@ let keys = {};
 document.addEventListener("keydown", e => keys[e.key]=true);
 document.addEventListener("keyup", e => keys[e.key]=false);
 
-// 🎨 terrain
+// 🎨 terrain réaliste
 function drawField(){
-  ctx.fillStyle = "#1b5e20";
+
+  ctx.fillStyle = "#1f7a2e";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
   ctx.strokeStyle = "white";
@@ -72,39 +73,53 @@ function drawField(){
   ctx.lineTo(canvas.width/2,canvas.height);
   ctx.stroke();
 
-  // cercle centre
+  // cercle
   ctx.beginPath();
   ctx.arc(canvas.width/2,canvas.height/2,80,0,Math.PI*2);
   ctx.stroke();
 
   // surface de but
-  ctx.strokeRect(canvas.width-120,canvas.height/2-100,100,200);
+  ctx.strokeRect(canvas.width-120,canvas.height/2-120,100,240);
 }
 
-// 👤 joueur stylé
+// 👤 joueur humain
 function drawPlayer(x,y,color){
-  ctx.fillStyle = "#ffcc80";
+
+  // tête
+  ctx.fillStyle = "#ffd6a5";
   ctx.beginPath();
   ctx.arc(x,y,10,0,Math.PI*2);
   ctx.fill();
 
+  // corps
   ctx.fillStyle = color;
-  ctx.fillRect(x-6,y+10,12,25);
+  ctx.fillRect(x-7,y+10,14,25);
+
+  // jambes
+  ctx.fillStyle = "#222";
+  ctx.fillRect(x-7,y+35,6,12);
+  ctx.fillRect(x+1,y+35,6,12);
 }
 
-// 🔁 update
+// ⚽ update physique
 function update(){
 
-  // mouvement joueur
-  if(keys["ArrowUp"]) player.y -= player.speed;
-  if(keys["ArrowDown"]) player.y += player.speed;
-  if(keys["ArrowLeft"]) player.x -= player.speed;
-  if(keys["ArrowRight"]) player.x += player.speed;
+  // mouvement joueur fluide
+  if(keys["ArrowUp"]) player.vy = -player.speed;
+  else if(keys["ArrowDown"]) player.vy = player.speed;
+  else player.vy *= 0.8;
 
-  // tir
+  if(keys["ArrowLeft"]) player.vx = -player.speed;
+  else if(keys["ArrowRight"]) player.vx = player.speed;
+  else player.vx *= 0.8;
+
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // ⚽ tirer
   if(keys[" "] && owned){
     owned = false;
-    ballSpeedX = 10;
+    ball.vx = 10;
   }
 
   // balle suit joueur
@@ -112,35 +127,45 @@ function update(){
     ball.x = player.x;
     ball.y = player.y;
   } else {
-    ball.x += ballSpeedX;
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    // friction réaliste
+    ball.vx *= ball.friction;
+    ball.vy *= ball.friction;
   }
 
-  // 🤖 ennemis suivent balle
+  // 🤖 IA réaliste
   enemies.forEach(e=>{
-    if(e.x < ball.x) e.x += 2.5;
-    if(e.x > ball.x) e.x -= 2.5;
-    if(e.y < ball.y) e.y += 2.5;
-    if(e.y > ball.y) e.y -= 2.5;
+    let dx = ball.x - e.x;
+    let dy = ball.y - e.y;
 
+    e.x += dx * 0.02;
+    e.y += dy * 0.02;
+
+    // prise de balle
     if(Math.hypot(e.x-ball.x,e.y-ball.y)<15){
       owned = false;
     }
   });
 
   // ⚽ but
-  if(ball.x > canvas.width-40 &&
-     ball.y > canvas.height/2-75 &&
-     ball.y < canvas.height/2+75){
+  if(ball.x > canvas.width-30 &&
+     ball.y > canvas.height/2-80 &&
+     ball.y < canvas.height/2+80){
+
     score++;
 
-    player.x = 100;
+    player.x = 150;
     player.y = canvas.height/2;
 
     ball.x = player.x;
     ball.y = player.y;
 
+    ball.vx = 0;
+    ball.vy = 0;
+
     owned = true;
-    ballSpeedX = 0;
   }
 
   draw();
@@ -160,7 +185,7 @@ function draw(){
     drawPlayer(e.x,e.y,"red");
   });
 
-  // balle
+  // ⚽ balle réaliste
   ctx.fillStyle="white";
   ctx.beginPath();
   ctx.arc(ball.x,ball.y,6,0,Math.PI*2);
