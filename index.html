@@ -1,125 +1,93 @@
-import pygame
-import random
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Football Game ⚽</title>
+</head>
+<body>
 
-pygame.init()
+<canvas id="game" width="800" height="500"></canvas>
 
-# écran
-screen = pygame.display.set_mode((800, 500))
-pygame.display.set_caption("Jeu de foot ⚽")
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-clock = pygame.time.Clock()
+let player = {x:100, y:250};
+let ball = {x:120, y:250};
+let ballOwned = true;
+let ballSpeedX = 0;
 
-# joueur
-player = pygame.Rect(100, 250, 20, 20)
+let enemies = [{x:500,y:200},{x:600,y:300}];
+let goal = {x:780,y:200,h:100};
 
-# ballon
-ball = pygame.Rect(120, 250, 10, 10)
-ball_owned = True
-ball_speed_x = 0
-ball_speed_y = 0
+let score = 0;
 
-# ennemis
-enemies = [
-    pygame.Rect(400, 150, 20, 20),
-    pygame.Rect(500, 350, 20, 20)
-]
+let keys = {};
+document.addEventListener("keydown", e => keys[e.key]=true);
+document.addEventListener("keyup", e => keys[e.key]=false);
 
-# gardien
-goalkeeper = pygame.Rect(760, 200, 20, 80)
+function update(){
 
-# but
-goal = pygame.Rect(780, 200, 10, 100)
+if(keys["ArrowUp"]) player.y -= 4;
+if(keys["ArrowDown"]) player.y += 4;
+if(keys["ArrowLeft"]) player.x -= 4;
+if(keys["ArrowRight"]) player.x += 4;
 
-score = 0
-speed = 5
+if(keys[" "] && ballOwned){
+ballOwned = false;
+ballSpeedX = 8;
+}
 
-running = True
+if(ballOwned){
+ball.x = player.x;
+ball.y = player.y;
+}else{
+ball.x += ballSpeedX;
+}
 
-while running:
-    clock.tick(60)
-    screen.fill((0, 150, 0))
+enemies.forEach(e=>{
+if(e.x < ball.x) e.x += 2;
+if(e.x > ball.x) e.x -= 2;
+if(e.y < ball.y) e.y += 2;
+if(e.y > ball.y) e.y -= 2;
+});
 
-    # événements
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+if(ball.x > goal.x){
+score++;
+player.x=100;player.y=250;
+ballOwned=true;
+ballSpeedX=0;
+}
 
-        # ⚽ tirer balle
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE and ball_owned:
-                ball_owned = False
-                ball_speed_x = 8
+draw();
+requestAnimationFrame(update);
+}
 
-    # clavier joueur
-    keys = pygame.key.get_pressed()
+function draw(){
+ctx.clearRect(0,0,800,500);
 
-    if keys[pygame.K_UP]:
-        player.y -= speed
-    if keys[pygame.K_DOWN]:
-        player.y += speed
-    if keys[pygame.K_LEFT]:
-        player.x -= speed
-    if keys[pygame.K_RIGHT]:
-        player.x += speed
+ctx.fillStyle="green";
+ctx.fillRect(0,0,800,500);
 
-    # balle suit joueur si possédée
-    if ball_owned:
-        ball.x = player.x + 10
-        ball.y = player.y
-    else:
-        ball.x += ball_speed_x
+ctx.fillStyle="blue";
+ctx.fillRect(player.x,player.y,20,20);
 
-    # 🤖 ennemis suivent la balle
-    for e in enemies:
-        if e.x < ball.x:
-            e.x += 2
-        if e.x > ball.x:
-            e.x -= 2
-        if e.y < ball.y:
-            e.y += 2
-        if e.y > ball.y:
-            e.y -= 2
+ctx.fillStyle="white";
+ctx.beginPath();
+ctx.arc(ball.x,ball.y,6,0,Math.PI*2);
+ctx.fill();
 
-        # vol balle
-        if e.colliderect(ball):
-            ball_owned = False
+ctx.fillStyle="red";
+enemies.forEach(e=>{
+ctx.fillRect(e.x,e.y,20,20);
+});
 
-    # 🧤 gardien suit balle
-    if goalkeeper.y < ball.y:
-        goalkeeper.y += 2
-    if goalkeeper.y > ball.y:
-        goalkeeper.y -= 2
+ctx.fillStyle="white";
+ctx.fillText("Score: "+score,20,20);
+}
 
-    # ⚽ but
-    if ball.colliderect(goal):
-        score += 1
-        player.x, player.y = 100, 250
-        ball_owned = True
-        ball_speed_x = 0
+update();
+</script>
 
-    # limites terrain
-    player.x = max(0, min(780, player.x))
-    player.y = max(0, min(480, player.y))
-
-    # dessin terrain
-    pygame.draw.rect(screen, (255, 255, 255), goal)
-    pygame.draw.rect(screen, (200, 200, 200), goalkeeper)
-
-    # joueur
-    pygame.draw.rect(screen, (0, 0, 255), player)
-
-    # ballon
-    pygame.draw.circle(screen, (255, 255, 255), ball.center, 5)
-
-    # ennemis
-    for e in enemies:
-        pygame.draw.rect(screen, (255, 0, 0), e)
-
-    # score
-    font = pygame.font.Font(None, 36)
-    text = font.render(f"Score: {score}", True, (255, 255, 255))
-    screen.blit(text, (20, 20))
-
-    pygame.display.update()
-
-pygame.quit()
+</body>
+</html>
