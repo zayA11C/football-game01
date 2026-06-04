@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Rings Ultra FX ⚪💥</title>
+<title>Score Boost Game ⚪🔥</title>
 
 <style>
 body{
@@ -10,11 +10,47 @@ margin:0;
 overflow:hidden;
 font-family:Arial;
 }
+
 canvas{display:block;}
+
+/* 🎮 UI SCORE */
+#ui{
+position:absolute;
+top:10px;
+left:10px;
+color:white;
+z-index:10;
+}
+
+button{
+padding:10px 15px;
+font-size:18px;
+border:none;
+cursor:pointer;
+background:#ffcc00;
+color:black;
+border-radius:8px;
+}
+
+#panel{
+margin-top:10px;
+background:rgba(0,0,0,0.5);
+padding:10px;
+border-radius:8px;
+}
 </style>
 </head>
 
 <body>
+
+<div id="ui">
+<button onclick="toggleScore()">SCORE</button>
+
+<div id="panel" style="display:none;">
+Score: <span id="scoreText">0</span><br>
+Boost: <span id="boostText">1</span>
+</div>
+</div>
 
 <canvas id="game"></canvas>
 
@@ -47,43 +83,32 @@ document.addEventListener("keyup",e=>keys[e.code]=false);
 
 // 🔵 cercles
 let rings=[];
-for(let i=0;i<15;i++) spawnRing();
+for(let i=0;i<12;i++) spawnRing();
 
 function spawnRing(){
 rings.push({
 x:Math.random()*c.width,
 y:Math.random()*c.height,
 r:40+Math.random()*25,
-color:"white",
-life:3000
+color:"white"
 });
 }
 
-// 💥 particules explosion
-let particles=[];
-
-// 💰 score
+// 💰 score + boost
 let score=0;
-let combo=1;
-let lastHit=0;
+let boost=1;
+
+// 🔥 panel
+let showScore=false;
+
+function toggleScore(){
+showScore=!showScore;
+document.getElementById("panel").style.display=showScore?"block":"none";
+}
 
 // 🌈 couleur
 function randomColor(){
 return `hsl(${Math.random()*360},100%,60%)`;
-}
-
-// 💥 explosion FX
-function explosion(x,y,color){
-for(let i=0;i<12;i++){
-particles.push({
-x:x,
-y:y,
-vx:(Math.random()-0.5)*6,
-vy:(Math.random()-0.5)*6,
-life:40,
-color:color
-});
-}
 }
 
 // 🎮 update
@@ -101,52 +126,29 @@ if(keys["ArrowRight"]) ball.x+=ball.speed;
 ball.x=Math.max(0,Math.min(c.width,ball.x));
 ball.y=Math.max(0,Math.min(c.height,ball.y));
 
-// combo reset
-if(Date.now()-lastHit>1200){
-combo=1;
-}
-
 // rings
 for(let i=rings.length-1;i>=0;i--){
 let r=rings[i];
-
-r.life-=16;
 
 let d=Math.hypot(ball.x-r.x,ball.y-r.y);
 
 if(d<r.r){
 
-// 💥 explosion
-explosion(ball.x,ball.y,r.color);
-
-// HIT
+// 🎯 BOOST + SCORE
 r.color=randomColor();
-score+=combo;
-combo++;
-lastHit=Date.now();
+
+score += 0.5 * boost;
+boost += 0.05;
 
 // remove + respawn
 rings.splice(i,1);
 spawnRing();
 }
-if(r.life<=0){
-rings.splice(i,1);
-spawnRing();
-}
 }
 
-// particles
-for(let i=particles.length-1;i>=0;i--){
-let p=particles[i];
-
-p.x+=p.vx;
-p.y+=p.vy;
-p.life--;
-
-if(p.life<=0){
-particles.splice(i,1);
-}
-}
+// UI update
+document.getElementById("scoreText").innerText=score.toFixed(1);
+document.getElementById("boostText").innerText=boost.toFixed(2);
 
 draw();
 requestAnimationFrame(update);
@@ -155,7 +157,6 @@ requestAnimationFrame(update);
 // 🎨 draw
 function draw(){
 
-// 🌈 background flash
 ctx.fillStyle=`hsl(${hue},60%,10%)`;
 ctx.fillRect(0,0,c.width,c.height);
 
@@ -169,32 +170,16 @@ ctx.arc(r.x,r.y,r.r,0,Math.PI*2);
 ctx.stroke();
 });
 
-// particles 💥
-particles.forEach(p=>{
-ctx.fillStyle=p.color;
-ctx.globalAlpha=p.life/40;
-
-ctx.fillRect(p.x,p.y,4,4);
-
-ctx.globalAlpha=1;
-});
-
 // ball
 ctx.fillStyle="white";
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
 ctx.fill();
 
-// UI
+// info
 ctx.fillStyle="white";
-ctx.font="28px Arial";
-ctx.fillText("Score: "+score,20,40);
-
-ctx.font="22px Arial";
-ctx.fillText("Combo x"+combo,20,70);
-
-ctx.font="16px Arial";
-ctx.fillText("💥 ULTRA FX MODE",20,100);
+ctx.font="18px Arial";
+ctx.fillText("Touch circles = +0.5 boost ⚡",20,120);
 }
 
 update();
