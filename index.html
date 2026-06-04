@@ -2,13 +2,13 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Football Clean ⚽</title>
+<title>Football Game PRO ⚽</title>
 
 <style>
 body{
 margin:0;
 overflow:hidden;
-background:#1b5e20;
+background:black;
 font-family:Arial;
 }
 canvas{display:block;}
@@ -23,6 +23,7 @@ canvas{display:block;}
 const c=document.getElementById("game");
 const ctx=c.getContext("2d");
 
+// fullscreen
 function resize(){
 c.width=window.innerWidth;
 c.height=window.innerHeight;
@@ -30,47 +31,180 @@ c.height=window.innerHeight;
 resize();
 window.addEventListener("resize",resize);
 
-// joueur
-let p={x:100,y:200};
+// ⚽ équipe
+let team=[
+{x:120,y:200},
+{x:120,y:260},
+{x:120,y:320}
+];
 
-// équipe
-let team=[p];
+let selected=0;
 
-// balle
-let ball={x:140,y:200};
+// 🤖 ennemis
+let enemies=[
+{x:600,y:200},
+{x:650,y:300},
+{x:700,y:250}
+];
+
+// ⚽ balle
+let ball={x:150,y:200,vx:0,vy:0};
+let owner="player";
+
+// score
+let score=0;
 
 // clavier
 let keys={};
 document.addEventListener("keydown",e=>keys[e.code]=true);
 document.addEventListener("keyup",e=>keys[e.code]=false);
 
+// changer joueur + tir
+document.addEventListener("keydown",e=>{
+
+if(e.code==="KeyQ"){
+selected=(selected+1)%team.length;
+}
+
+// ⚽ TIR
+if(e.code==="Space" && owner==="player"){
+let p=team[selected];
+
+ball.x=p.x;
+ball.y=p.y;
+
+ball.vx=10;
+ball.vy=(Math.random()-0.5)*4;
+
+owner="ball";
+}
+
+});
+
+// 🎮 update
 function update(){
 
-// move
+let p=team[selected];
+
+// mouvement joueur
 if(keys["ArrowUp"]) p.y-=5;
 if(keys["ArrowDown"]) p.y+=5;
 if(keys["ArrowLeft"]) p.x-=5;
 if(keys["ArrowRight"]) p.x+=5;
 
-// balle suit joueur
-ball.x=p.x+20;
-ball.y=p.y+20;
+// balle suit joueur si possession
+if(owner==="player"){
+ball.x += (p.x-ball.x)*0.2;
+ball.y += (p.y-ball.y)*0.2;
+}
+
+// balle physique
+if(owner==="ball"){
+ball.x+=ball.vx;
+ball.y+=ball.vy;
+
+ball.vx*=0.98;
+ball.vy*=0.98;
+}
+
+// ennemis IA
+enemies.forEach(e=>{
+let dx=ball.x-e.x;
+let dy=ball.y-e.y;
+
+e.x+=dx*0.02;
+e.y+=dy*0.02;
+
+// prise balle
+if(Math.hypot(e.x-ball.x,e.y-ball.y)<15){
+owner="enemy";
+}
+});
+
+// ennemis shoot vers gauche
+if(owner==="enemy"){
+ball.x+= (100-ball.x)*0.05;
+ball.y+= (200-ball.y)*0.05;
+}
+
+// but droit
+if(ball.x>c.width-30){
+score++;
+reset();
+}
+
+// but gauche
+if(ball.x<30){
+score--;
+reset();
+}
 
 draw();
 requestAnimationFrame(update);
 }
 
-function draw(){
+// reset
+function reset(){
+team.forEach(p=>{
+p.x=120;
+p.y=200+Math.random()*100;
+});
+ball.x=150;
+ball.y=200;
+ball.vx=0;
+ball.vy=0;
+owner="player";
+}
 
-ctx.clearRect(0,0,c.width,c.height);
+// 🏟️ stade
+function field(){
 
-// terrain
-ctx.fillStyle="#2e7d32";
+ctx.fillStyle="#1f7a2e";
 ctx.fillRect(0,0,c.width,c.height);
 
-// joueur
-ctx.fillStyle="blue";
-ctx.fillRect(p.x,p.y,30,30);
+// ligne centre
+ctx.strokeStyle="white";
+ctx.beginPath();
+ctx.moveTo(c.width/2,0);
+ctx.lineTo(c.width/2,c.height);
+ctx.stroke();
+
+// cercle
+ctx.beginPath();
+ctx.arc(c.width/2,c.height/2,80,0,Math.PI*2);
+ctx.stroke();
+
+// cages
+ctx.strokeRect(c.width-120,c.height/2-120,100,240);
+ctx.strokeRect(20,c.height/2-120,100,240);
+}
+
+// 👤 joueur
+function drawPlayer(x,y,color){
+
+ctx.fillStyle="#ffcc80";
+ctx.beginPath();
+ctx.arc(x,y,8,0,Math.PI*2);
+ctx.fill();
+
+ctx.fillStyle=color;
+ctx.fillRect(x-6,y+8,12,20);
+}
+
+// 🎨 draw
+function draw(){
+
+field();
+
+// équipe
+team.forEach((p,i)=>{
+drawPlayer(p.x,p.y,i===selected?"blue":"lightblue");
+});
+
+// ennemis
+enemies.forEach(e=>{
+drawPlayer(e.x,e.y,"red");
+});
 
 // balle
 ctx.fillStyle="white";
@@ -78,10 +212,14 @@ ctx.beginPath();
 ctx.arc(ball.x,ball.y,6,0,Math.PI*2);
 ctx.fill();
 
-// texte test
+// score
 ctx.fillStyle="white";
-ctx.font="20px Arial";
-ctx.fillText("VERSION CLEAN OK ⚽",20,30);
+ctx.font="30px Arial";
+ctx.fillText("Score: "+score,20,40);
+
+// commandes
+ctx.font="18px Arial";
+ctx.fillText("Arrow = move | Q = switch | SPACE = shoot",20,80);
 }
 
 update();
