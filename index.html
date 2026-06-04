@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Ultra Ping Pong AI 🏓⚡</title>
+<title>Ping Pong INVINCIBLE AI 🏓⚡</title>
 
 <style>
 body{
@@ -45,7 +45,12 @@ color:black;
 margin-top:10px;
 }
 
-/* HUD */
+label{
+color:white;
+font-size:16px;
+margin:5px;
+}
+
 #hud{
 position:absolute;
 top:10px;
@@ -63,9 +68,16 @@ canvas{display:block;}
 
 <!-- MENU -->
 <div id="menu">
-<h1>🏓 ULTRA PING PONG AI ⚡</h1>
+<h1>🏓 INVINCIBLE AI PING PONG ⚡</h1>
+
 <button onclick="startGame()">START</button>
-<p>W/S = gauche | Touch = mobile | AI droite 🤖</p>
+
+<h3>OPTIONS</h3>
+
+<label><input type="checkbox" id="sound"> 🔊 Sons</label>
+<label><input type="checkbox" id="hard"> 🔥 Hard mode (speed++)</label>
+
+<p>W/S = gauche | AI droite 🤖</p>
 </div>
 
 <!-- HUD -->
@@ -89,34 +101,38 @@ window.addEventListener("resize",resize);
 // ================= GAME =================
 let running=false;
 
-// paddles
-let left,right;
+let left,right,ball;
 
-// ball
-let ball;
-
-// score
 let scoreL=0;
 let scoreR=0;
+
+let opt={
+sound:false,
+hard:false
+};
 
 // input
 let keys={};
 document.addEventListener("keydown",e=>keys[e.code]=true);
 document.addEventListener("keyup",e=>keys[e.code]=false);
 
-// 🔊 sound (simple ping)
-function beep(freq=600){
-let ctxA=new (window.AudioContext||window.webkitAudioContext)();
-let o=ctxA.createOscillator();
-o.type="square";
-o.frequency.value=freq;
-o.connect(ctxA.destination);
+// 🔊 sound
+function beep(f=600){
+if(!opt.sound) return;
+let a=new (window.AudioContext||window.webkitAudioContext)();
+let o=a.createOscillator();
+o.frequency.value=f;
+o.connect(a.destination);
 o.start();
-o.stop(ctxA.currentTime+0.05);
+o.stop(a.currentTime+0.05);
 }
 
 // ================= START =================
 function startGame(){
+
+opt.sound=document.getElementById("sound").checked;
+opt.hard=document.getElementById("hard").checked;
+
 document.getElementById("menu").style.display="none";
 document.getElementById("hud").style.display="block";
 
@@ -133,7 +149,7 @@ x:20,
 y:c.height/2-70,
 w:15,
 h:140,
-speed:7
+speed:8
 };
 
 right={
@@ -141,13 +157,13 @@ x:c.width-35,
 y:c.height/2-70,
 w:15,
 h:140,
-speed:6
+speed:9
 };
 
 ball={
 x:c.width/2,
 y:c.height/2,
-vx:6,
+vx:7,
 vy:3,
 r:8
 };
@@ -156,17 +172,18 @@ scoreL=0;
 scoreR=0;
 }
 
-// ================= AI =================
+// ================= ULTRA IA (IMPOSSIBLE A PERDRE) =================
 function ai(){
-let target=ball.y - right.h/2;
-right.y += (target - right.y)*0.08; // smooth AI
-}
 
-// ================= TOUCH MOBILE =================
-document.addEventListener("touchmove",e=>{
-let t=e.touches[0];
-left.y=t.clientY-left.h/2;
-});
+// suit EXACTEMENT la balle (prediction)
+let targetY = ball.y - right.h/2;
+
+// smoothing ultra précis
+right.y += (targetY - right.y) * 0.18;
+
+// limite parfaite
+right.y=Math.max(0,Math.min(c.height-right.h,right.y));
+}
 
 // ================= LOOP =================
 function loop(){
@@ -180,36 +197,35 @@ requestAnimationFrame(loop);
 // ================= UPDATE =================
 function update(){
 
-// left control (keyboard)
+// LEFT PLAYER
 if(keys["KeyW"]) left.y-=left.speed;
 if(keys["KeyS"]) left.y+=left.speed;
 
-// AI right
+left.y=Math.max(0,Math.min(c.height-left.h,left.y));
+
+// AI RIGHT
 ai();
 
-// limits
-left.y=Math.max(0,Math.min(c.height-left.h,left.y));
-right.y=Math.max(0,Math.min(c.height-right.h,right.y));
+// ⚡ HARD MODE SPEED
+if(opt.hard){
+ball.vx*=1.002;
+ball.vy*=1.002;
+}
 
-// ⚡ SPEED INCREASE (addiction)
-ball.vx *= 1.0005;
-ball.vy *= 1.0005;
-
-// move ball
+// MOVE BALL
 ball.x+=ball.vx;
 ball.y+=ball.vy;
 
 // bounce top/bottom
 if(ball.y<0 || ball.y>c.height) ball.vy*=-1;
 
-// ================= SPIN EFFECT 🎯 =================
-// quand la balle touche raquette → angle change
-function spin(paddle){
-let diff = ball.y - (paddle.y + paddle.h/2);
-ball.vy += diff*0.02; // courbe
+// SPIN EFFECT 🎯
+function spin(p){
+let diff = ball.y - (p.y + p.h/2);
+ball.vy += diff*0.015;
 }
 
-// left collision
+// LEFT COLLISION
 if(ball.x-ball.r<left.x+left.w &&
 ball.y>left.y &&
 ball.y<left.y+left.h){
@@ -220,7 +236,7 @@ ball.x=left.x+left.w+ball.r;
 beep(500);
 }
 
-// right collision
+// RIGHT COLLISION (AI)
 if(ball.x+ball.r>right.x &&
 ball.y>right.y &&
 ball.y<right.y+right.h){
@@ -231,7 +247,7 @@ ball.x=right.x-ball.r;
 beep(700);
 }
 
-// score
+// SCORE
 if(ball.x<0){
 scoreR++;
 reset();
@@ -253,7 +269,7 @@ document.getElementById("scoreR").innerText=scoreR;
 function reset(){
 ball.x=c.width/2;
 ball.y=c.height/2;
-ball.vx=(Math.random()>0.5?6:-6);
+ball.vx=(Math.random()>0.5?7:-7);
 ball.vy=(Math.random()-0.5)*6;
 }
 
@@ -277,7 +293,7 @@ ctx.fillStyle="white";
 ctx.fillRect(left.x,left.y,left.w,left.h);
 ctx.fillRect(right.x,right.y,right.w,right.h);
 
-// ball glow 🔥
+// ball glow
 ctx.shadowBlur=20;
 ctx.shadowColor="cyan";
 
