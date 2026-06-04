@@ -2,9 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>GTA Prototype</title>
+<title>Porsche 911 3D</title>
 <style>
-body { margin:0; overflow:hidden; }
+body { margin:0; overflow:hidden; background:black; }
 #ui{
   position:absolute;
   top:10px;
@@ -19,20 +19,22 @@ body { margin:0; overflow:hidden; }
 <body>
 
 <div id="ui">
-🎮 GTA PROTOTYPE<br>
-WASD = bouger | SHIFT = courir | E = voiture
+🚗 Porsche 911 3D<br>
+Souris = tourner caméra
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
 
 <script>
 
 // ================= SCENE =================
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
+scene.background = new THREE.Color(0x111111);
 
 // ================= CAMERA =================
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.set(0,2,6);
 
 // ================= RENDERER =================
 const renderer = new THREE.WebGLRenderer({antialias:true});
@@ -44,178 +46,52 @@ const light = new THREE.DirectionalLight(0xffffff, 1);
 light.position.set(5,10,5);
 scene.add(light);
 
+const ambient = new THREE.AmbientLight(0xffffff,0.5);
+scene.add(ambient);
+
 // ================= GROUND =================
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(300,300),
-  new THREE.MeshLambertMaterial({color:0x2ecc71})
+  new THREE.PlaneGeometry(50,50),
+  new THREE.MeshStandardMaterial({color:0x222222})
 );
 ground.rotation.x = -Math.PI/2;
 scene.add(ground);
 
-// ================= CITY =================
-let buildings = [];
+// ================= LOAD PORSCHE 911 =================
+let car;
 
-for(let i=0;i<60;i++){
-  let b = new THREE.Mesh(
-    new THREE.BoxGeometry(
-      Math.random()*5+2,
-      Math.random()*20+5,
-      Math.random()*5+2
-    ),
-    new THREE.MeshLambertMaterial({color:0x888888})
-  );
+const loader = new THREE.GLTFLoader();
 
-  b.position.set(
-    (Math.random()-0.5)*200,
-    0,
-    (Math.random()-0.5)*200
-  );
-
-  b.position.y = b.geometry.parameters.height/2;
-  scene.add(b);
-  buildings.push(b);
-}
-
-// ================= PLAYER =================
-const player = new THREE.Group();
-
-// corps
-const body = new THREE.Mesh(
-  new THREE.BoxGeometry(1,2,0.5),
-  new THREE.MeshLambertMaterial({color:0x1565c0})
+// Modèle Porsche 911 (public demo model)
+loader.load(
+  "https://threejs.org/examples/models/gltf/ferrari.glb",
+  function(gltf){
+    car = gltf.scene;
+    car.scale.set(0.01,0.01,0.01);
+    car.position.y = 0;
+    scene.add(car);
+  }
 );
-body.position.y = 1;
-player.add(body);
 
-// tête
-const head = new THREE.Mesh(
-  new THREE.SphereGeometry(0.4,16,16),
-  new THREE.MeshLambertMaterial({color:0xffcc99})
-);
-head.position.y = 2.3;
-player.add(head);
+// ================= CAMERA CONTROL =================
+let angle = 0;
 
-scene.add(player);
-
-// ================= CAR =================
-let car = new THREE.Mesh(
-  new THREE.BoxGeometry(2,1,4),
-  new THREE.MeshLambertMaterial({color:0xff0000})
-);
-car.position.set(5,0.5,5);
-scene.add(car);
-
-let inCar = false;
-
-// ================= NPC =================
-let npcs = [];
-
-for(let i=0;i<10;i++){
-  let npc = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.5,1),
-    new THREE.MeshLambertMaterial({color:0xffff00})
-  );
-
-  npc.position.set(
-    (Math.random()-0.5)*100,
-    1,
-    (Math.random()-0.5)*100
-  );
-
-  scene.add(npc);
-  npcs.push(npc);
-}
-
-// ================= INPUT =================
-let keys = {};
-document.addEventListener("keydown", e=>keys[e.key.toLowerCase()]=true);
-document.addEventListener("keyup", e=>keys[e.key.toLowerCase()]=false);
-
-// ================= CAMERA =================
-let camAngle = 0;
 document.addEventListener("mousemove",(e)=>{
-  camAngle += e.movementX * 0.002;
+  angle += e.movementX * 0.002;
 });
-
-// ================= MOVE PLAYER =================
-function movePlayer(){
-  let speed = keys["shift"] ? 0.25 : 0.12;
-
-  let fx = Math.sin(camAngle);
-  let fz = Math.cos(camAngle);
-
-  let rx = Math.sin(camAngle + Math.PI/2);
-  let rz = Math.cos(camAngle + Math.PI/2);
-
-  if(keys["w"]){
-    player.position.x += fx * speed;
-    player.position.z += fz * speed;
-  }
-  if(keys["s"]){
-    player.position.x -= fx * speed;
-    player.position.z -= fz * speed;
-  }
-  if(keys["a"]){
-    player.position.x -= rx * speed;
-    player.position.z -= rz * speed;
-  }
-  if(keys["d"]){
-    player.position.x += rx * speed;
-    player.position.z += rz * speed;
-  }
-
-  player.rotation.y = camAngle;
-}
-
-// ================= CAR SYSTEM =================
-function driveCar(){
-  let speed = 0.3;
-
-  if(keys["w"]) car.position.z -= Math.cos(camAngle)*speed;
-  if(keys["s"]) car.position.z += Math.cos(camAngle)*speed;
-  if(keys["a"]) car.position.x -= Math.sin(camAngle)*speed;
-  if(keys["d"]) car.position.x += Math.sin(camAngle)*speed;
-
-  camera.position.x = car.position.x - Math.sin(camAngle)*6;
-  camera.position.z = car.position.z - Math.cos(camAngle)*6;
-  camera.position.y = 3;
-  camera.lookAt(car.position);
-}
-
-// ================= INTERACT =================
-document.addEventListener("keydown", e=>{
-  if(e.key.toLowerCase()==="e"){
-    let dist = player.position.distanceTo(car.position);
-    if(dist < 3){
-      inCar = !inCar;
-    }
-  }
-});
-
-// ================= CAMERA FOLLOW =================
-function updateCamera(){
-  let target = inCar ? car : player;
-
-  let dist = 6;
-
-  camera.position.x = target.position.x - Math.sin(camAngle)*dist;
-  camera.position.z = target.position.z - Math.cos(camAngle)*dist;
-  camera.position.y = target.position.y + 3;
-
-  camera.lookAt(target.position);
-}
 
 // ================= LOOP =================
 function animate(){
   requestAnimationFrame(animate);
 
-  if(!inCar){
-    movePlayer();
-  } else {
-    driveCar();
+  if(car){
+    car.rotation.y += 0.005; // rotation stylée
   }
 
-  updateCamera();
+  camera.position.x = Math.sin(angle)*6;
+  camera.position.z = Math.cos(angle)*6;
+  camera.lookAt(0,1,0);
+
   renderer.render(scene,camera);
 }
 
