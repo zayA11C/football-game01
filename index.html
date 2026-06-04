@@ -2,17 +2,16 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>ULTRA GEOMETRY RINGS ⚡</title>
+<title>Ultra Neon Rings ⚡</title>
 
 <style>
 body{
 margin:0;
 overflow:hidden;
 font-family:Arial;
-background:#000;
+background:black;
 }
 
-/* CANVAS */
 canvas{display:block;}
 
 /* MENU */
@@ -21,33 +20,31 @@ position:absolute;
 top:0;left:0;
 width:100%;
 height:100%;
-background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
 display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
 color:white;
 z-index:10;
+background:linear-gradient(45deg,#0f0c29,#302b63,#ff00cc,#00ffcc);
+background-size:400% 400%;
+animation:moveBg 6s infinite alternate;
+}
+
+@keyframes moveBg{
+0%{background-position:0% 50%;}
+100%{background-position:100% 50%;}
 }
 
 button{
 padding:12px 20px;
-margin:8px;
 font-size:18px;
 border:none;
 border-radius:10px;
 cursor:pointer;
-background:#7b2cbf;
-color:white;
-}
-
-input[type="checkbox"]{
-transform:scale(1.3);
-}
-
-label{
-font-size:16px;
-margin:5px;
+background:#00ffcc;
+color:black;
+margin-top:10px;
 }
 
 /* HUD */
@@ -64,32 +61,14 @@ display:none;
 
 <body>
 
-<!-- MENU -->
 <div id="menu">
-
-<h1>⚡ ULTRA RINGS GAME</h1>
-
-<button onclick="startGame()">▶ START</button>
-
-<h3>OPTIONS</h3>
-
-<label><input type="checkbox" id="sound"> 🔊 Sons</label>
-<label><input type="checkbox" id="explosion"> 💥 Explosion</label>
-<label><input type="checkbox" id="magnet"> 🧲 Aimant</label>
-<label><input type="checkbox" id="hardcore"> 🔴 Hardcore</label>
-
-<br>
-
-<button onclick="resetScore()">🏆 Reset Leaderboard</button>
-
-<h3>Best Score: <span id="best">0</span></h3>
-
+<h1>⚡ NEON RINGS ⚡</h1>
+<button onclick="startGame()">START</button>
+<p>Arrow keys = move | Touch rings ⚪</p>
 </div>
 
-<!-- HUD -->
 <div id="hud">
-Score: <span id="score">0</span> |
-Speed: <span id="speed">1</span>
+Score: <span id="score">0</span>
 </div>
 
 <canvas id="game"></canvas>
@@ -105,101 +84,64 @@ c.height=window.innerHeight;
 resize();
 window.addEventListener("resize",resize);
 
-// 🎮 STATE
-let running=false;
+// 🌈 background animation
+let hue=0;
 
-// ⚪ player
-let ball={x:200,y:200,r:10,speed:5};
+// ⚪ player (VERT + VIOLET GLOW)
+let ball={
+x:200,
+y:200,
+r:12,
+speed:5
+};
 
 // 🔵 rings
 let rings=[];
 let particles=[];
 
-// 💰 stats
 let score=0;
-let speed=1;
+let running=false;
 
-// options
-let opt={
-sound:false,
-explosion:false,
-magnet:false,
-hardcore:false
-};
+// input
+let keys={};
+document.addEventListener("keydown",e=>keys[e.code]=true);
+document.addEventListener("keyup",e=>keys[e.code]=false);
 
-// 🏆 leaderboard
-let best=localStorage.getItem("best")||0;
-document.getElementById("best").innerText=best;
-
-// ---------------- MENU ----------------
+// START
 function startGame(){
-opt.sound=document.getElementById("sound").checked;
-opt.explosion=document.getElementById("explosion").checked;
-opt.magnet=document.getElementById("magnet").checked;
-opt.hardcore=document.getElementById("hardcore").checked;
-
 document.getElementById("menu").style.display="none";
 document.getElementById("hud").style.display="block";
-
 running=true;
-init();
+
+for(let i=0;i<18;i++) spawnRing();
+
 loop();
 }
 
-// reset leaderboard
-function resetScore(){
-localStorage.setItem("best",0);
-document.getElementById("best").innerText=0;
-}
-
-// ---------------- INIT ----------------
-function init(){
-rings=[];
-for(let i=0;i<15;i++) spawnRing();
-score=0;
-speed=1;
-}
-
-// ---------------- RINGS ----------------
+// spawn ring
 function spawnRing(){
 rings.push({
 x:Math.random()*c.width,
 y:Math.random()*c.height,
-r:40+Math.random()*20,
-vx:(Math.random()-0.5)*opt.hardcore*2,
-vy:(Math.random()-0.5)*opt.hardcore*2,
+r:40+Math.random()*25,
 color:"white"
 });
 }
 
-// ---------------- SOUND ----------------
-function beep(){
-if(!opt.sound) return;
-let ctxAudio=new (window.AudioContext||window.webkitAudioContext)();
-let o=ctxAudio.createOscillator();
-o.type="sine";
-o.frequency.value=600;
-o.connect(ctxAudio.destination);
-o.start();
-o.stop(ctxAudio.currentTime+0.05);
-}
-
-// ---------------- EXPLOSION ----------------
-function explode(x,y,color){
-if(!opt.explosion) return;
-
-for(let i=0;i<12;i++){
+// 💥 explosion
+function explosion(x,y){
+for(let i=0;i<18;i++){
 particles.push({
-x,y,
+x,
+y,
 vx:(Math.random()-0.5)*6,
 vy:(Math.random()-0.5)*6,
-life:40,
-color
+life:40
 });
 }
 }
 
-// ---------------- LOOP ----------------
+// LOOP
 function loop(){
 if(!running) return;
 
@@ -208,46 +150,33 @@ draw();
 requestAnimationFrame(loop);
 }
 
-// ---------------- UPDATE ----------------
+// UPDATE
 function update(){
 
-// move
-document.onkeydown=e=>{
-if(e.code==="ArrowUp") ball.y-=ball.speed*speed;
-if(e.code==="ArrowDown") ball.y+=ball.speed*speed;
-if(e.code==="ArrowLeft") ball.x-=ball.speed*speed;
-if(e.code==="ArrowRight") ball.x+=ball.speed*speed;
-};
+hue+=1;
 
-// magnet
-if(opt.magnet){
-rings.forEach(r=>{
-let dx=ball.x-r.x;
-let dy=ball.y-r.y;
-r.x+=dx*0.02;
-r.y+=dy*0.02;
-});
-}
+// move ball
+if(keys["ArrowUp"]) ball.y-=ball.speed;
+if(keys["ArrowDown"]) ball.y+=ball.speed;
+if(keys["ArrowLeft"]) ball.x-=ball.speed;
+if(keys["ArrowRight"]) ball.x+=ball.speed;
 
-// hardcore movement
-if(opt.hardcore){
-rings.forEach(r=>{
-r.x+=r.vx;
-r.y+=r.vy;
-});
-}
+// limits
+ball.x=Math.max(0,Math.min(c.width,ball.x));
+ball.y=Math.max(0,Math.min(c.height,ball.y));
 
-// collision
+// rings
 for(let i=rings.length-1;i>=0;i--){
 let r=rings[i];
+
 let d=Math.hypot(ball.x-r.x,ball.y-r.y);
 
 if(d<r.r){
-score+=1;
-speed+=0.05;
 
-beep();
-explode(ball.x,ball.y,r.color);
+// 💥 effect touch
+explosion(ball.x,ball.y);
+
+score+=1;
 
 rings.splice(i,1);
 spawnRing();
@@ -260,30 +189,23 @@ let p=particles[i];
 p.x+=p.vx;
 p.y+=p.vy;
 p.life--;
+
 if(p.life<=0) particles.splice(i,1);
 }
 
-// save best
-if(score>best){
-best=score;
-localStorage.setItem("best",best);
-document.getElementById("best").innerText=best;
-}
-
-// UI
 document.getElementById("score").innerText=score;
-document.getElementById("speed").innerText=speed.toFixed(2);
 }
 
-// ---------------- DRAW ----------------
+// DRAW
 function draw(){
 
-ctx.fillStyle="black";
+// 🌈 animated background
+ctx.fillStyle=`hsl(${hue},60%,10%)`;
 ctx.fillRect(0,0,c.width,c.height);
 
 // rings
 rings.forEach(r=>{
-ctx.strokeStyle=r.color;
+ctx.strokeStyle="white";
 ctx.lineWidth=4;
 
 ctx.beginPath();
@@ -293,18 +215,22 @@ ctx.stroke();
 
 // particles
 particles.forEach(p=>{
-ctx.fillStyle=p.color;
-ctx.globalAlpha=p.life/40;
-ctx.fillRect(p.x,p.y,4,4);
-ctx.globalAlpha=1;
+ctx.fillStyle="rgba(255,255,255,0.7)";
+ctx.fillRect(p.x,p.y,3,3);
 });
 
-// player
+// ⚪ PLAYER (VERT + VIOLET GLOW)
+ctx.shadowBlur=20;
+ctx.shadowColor="purple";
+
 ctx.fillStyle="#00ff88";
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
 ctx.fill();
+
+ctx.shadowBlur=0;
 }
+
 </script>
 
 </body>
