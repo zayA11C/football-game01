@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Football Simple ⚽</title>
+<title>Football Game ⚽</title>
 
 <style>
 body{
@@ -21,13 +21,13 @@ display:block;
 <canvas id="game"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const c = document.getElementById("game");
+const ctx = c.getContext("2d");
 
 // plein écran
 function resize(){
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+c.width = window.innerWidth;
+c.height = window.innerHeight;
 }
 resize();
 window.addEventListener("resize",resize);
@@ -37,50 +37,34 @@ let player = {x:100,y:200};
 
 // ⚽ ennemis
 let enemies = [
-{x:500,y:200},
-{x:600,y:300}
+{x:600,y:200},
+{x:650,y:350}
 ];
 
 // ⚽ balle
-let ball = {x:140,y:200};
+let ball = {x:130,y:200};
 
-// contrôle
+// score
+let score = 0;
+
+// clavier
 let keys = {};
 document.addEventListener("keydown",e=>keys[e.code]=true);
 document.addEventListener("keyup",e=>keys[e.code]=false);
 
-// 🥅 cage (but)
-function goal(){
+// 🥅 cages
+function drawGoals(){
+
+// gauche
 ctx.fillStyle="white";
-ctx.fillRect(canvas.width-30,canvas.height/2-100,20,200);
+ctx.fillRect(0,c.height/2-100,20,200);
+
+// droite
+ctx.fillStyle="white";
+ctx.fillRect(c.width-20,c.height/2-100,20,200);
 }
 
-// 🎮 update
-function update(){
-
-// joueur move
-if(keys["ArrowUp"]) player.y-=5;
-if(keys["ArrowDown"]) player.y+=5;
-if(keys["ArrowLeft"]) player.x-=5;
-if(keys["ArrowRight"]) player.x+=5;
-
-// balle suit joueur
-ball.x = player.x + 15;
-ball.y = player.y + 15;
-
-// ennemis suivent balle
-enemies.forEach(e=>{
-if(e.x < ball.x) e.x += 2;
-if(e.x > ball.x) e.x -= 2;
-if(e.y < ball.y) e.y += 2;
-if(e.y > ball.y) e.y -= 2;
-});
-
-draw();
-requestAnimationFrame(update);
-}
-
-// 🎨 joueur style bonhomme
+// 👤 bonhomme
 function drawPlayer(x,y,color){
 
 // tête
@@ -99,17 +83,75 @@ ctx.fillRect(x-6,y+28,5,10);
 ctx.fillRect(x+1,y+28,5,10);
 }
 
+// 🎮 update
+function update(){
+
+// mouvement joueur
+if(keys["ArrowUp"]) player.y-=5;
+if(keys["ArrowDown"]) player.y+=5;
+if(keys["ArrowLeft"]) player.x-=5;
+if(keys["ArrowRight"]) player.x+=5;
+
+// balle suit joueur
+ball.x = player.x + 10;
+ball.y = player.y + 10;
+
+// ennemis suivent balle
+enemies.forEach(e=>{
+if(e.x < ball.x) e.x += 2;
+if(e.x > ball.x) e.x -= 2;
+if(e.y < ball.y) e.y += 2;
+if(e.y > ball.y) e.y -= 2;
+
+// prise balle
+if(Math.hypot(e.x-ball.x,e.y-ball.y)<15){
+ball.x = e.x;
+ball.y = e.y;
+}
+});
+
+// but (droite = goal)
+if(ball.x > c.width-30 && ball.y > c.height/2-100 && ball.y < c.height/2+100){
+score++;
+reset();
+}
+
+// but (gauche)
+if(ball.x < 30 && ball.y > c.height/2-100 && ball.y < c.height/2+100){
+score--;
+reset();
+}
+
+draw();
+requestAnimationFrame(update);
+}
+
+// reset
+function reset(){
+player.x = 100;
+player.y = 200;
+ball.x = 130;
+ball.y = 200;
+}
+
 // 🎨 draw
 function draw(){
 
-ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.clearRect(0,0,c.width,c.height);
 
 // terrain
 ctx.fillStyle="#2e7d32";
-ctx.fillRect(0,0,canvas.width,canvas.height);
+ctx.fillRect(0,0,c.width,c.height);
 
-// cage
-goal();
+// ligne centrale
+ctx.strokeStyle="white";
+ctx.beginPath();
+ctx.moveTo(c.width/2,0);
+ctx.lineTo(c.width/2,c.height);
+ctx.stroke();
+
+// cages
+drawGoals();
 
 // joueur
 drawPlayer(player.x,player.y,"blue");
@@ -125,13 +167,10 @@ ctx.beginPath();
 ctx.arc(ball.x,ball.y,6,0,Math.PI*2);
 ctx.fill();
 
-// ligne terrain
-ctx.strokeStyle="white";
-ctx.beginPath();
-ctx.moveTo(canvas.width/2,0);
-ctx.lineTo(canvas.width/2,canvas.height);
-ctx.stroke();
-
+// score
+ctx.fillStyle="white";
+ctx.font="30px Arial";
+ctx.fillText("Score: "+score,20,40);
 }
 
 update();
