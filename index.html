@@ -2,87 +2,124 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>NEON PONG ULTIMATE ALL-IN-ONE</title>
+<title>CYBER STEAM PONG</title>
 
 <style>
-body{margin:0;overflow:hidden;background:#000;font-family:Arial;touch-action:none;}
-canvas{display:block}
+body{margin:0;overflow:hidden;background:#000;font-family:Arial}
 
-/* MENU */
+/* ===== STEAM MENU ===== */
 #menu{
 position:absolute;inset:0;
 display:flex;flex-direction:column;
 justify-content:center;align-items:center;
-background:linear-gradient(45deg,#000,#111,#220033,#00ffff,#ff00ff);
+background:linear-gradient(45deg,#0a0a0a,#111,#220033,#00ffff,#ff00ff);
 background-size:400% 400%;
 animation:bg 6s infinite alternate;
-color:white;z-index:10;
+color:white;
+z-index:10;
 }
+
 @keyframes bg{0%{background-position:0% 50%}100%{background-position:100% 50%}}
 
-button,select{padding:10px;margin-top:10px;border-radius:10px;border:none}
+button{padding:10px;border:none;border-radius:8px;margin:5px}
 
 /* HUD */
 #hud{position:absolute;top:10px;left:10px;color:white;display:none}
 
-/* mobile */
-#touchL,#touchR{
-position:absolute;bottom:0;height:100px;width:50%;
+/* MATCHMAKING */
+#match{
+position:absolute;inset:0;
+display:none;
+justify-content:center;align-items:center;
+flex-direction:column;
+background:rgba(0,0,0,0.8);
+color:white;
+z-index:20;
 }
-#touchR{right:0}
-#touchL{left:0}
+
+/* canvas */
+canvas{display:block}
 </style>
 </head>
 
 <body>
 
 <div id="menu">
-<h1>🏓 NEON PONG ULTIMATE</h1>
+<h1>🎮 CYBER STEAM PONG</h1>
 
-<select id="mode">
-<option value="arcade">Arcade</option>
-<option value="pro">Pro</option>
-<option value="chaos">Chaos+</option>
-<option value="boss">Boss AI</option>
-<option value="multi">Multi (mock)</option>
-</select>
+<div id="profile">
+LVL: <span id="lvl">1</span> |
+MMR: <span id="mmr">1000</span>
+</div>
 
-<button onclick="start()">PLAY</button>
+<button onclick="queue()">PLAY MATCHMAKING</button>
+</div>
+
+<div id="match">
+<h2>🌐 Searching match...</h2>
+<p id="ping"></p>
 </div>
 
 <div id="hud">
-Score: <span id="l">0</span> - <span id="r">0</span> | XP:<span id="xp">0</span> LVL:<span id="lv">1</span>
+Score: <span id="l">0</span> - <span id="r">0</span>
 </div>
-
-<div id="touchL"></div>
-<div id="touchR"></div>
 
 <canvas id="c"></canvas>
 
 <script>
+// ===== CANVAS =====
 const c=document.getElementById("c");
 const ctx=c.getContext("2d");
+c.width=innerWidth;c.height=innerHeight;
 
-function resize(){c.width=innerWidth;c.height=innerHeight}
-resize();addEventListener("resize",resize);
+// ===== PLAYER PROFILE =====
+let lvl=1;
+let xp=0;
+let mmr=1000;
 
-// ===== STATE =====
-let left,right,ball,particles=[],holes=[],lasers=[],powerups=[];
-let scoreL=0,scoreR=0,xp=0,level=1;
-let running=false,mode="arcade";
-let shake=0,slow=1;
+// ===== GAME =====
+let left,right,ball;
+let running=false;
+let mode="ai";
 
-let keys={};
-addEventListener("keydown",e=>keys[e.code]=true);
-addEventListener("keyup",e=>keys[e.code]=false);
+// ===== IA (NEURAL SIMPLE PERCEPTRON) =====
+class Brain{
+constructor(){
+this.w1=Math.random()*2-1;
+this.w2=Math.random()*2-1;
+}
+predict(x,y){
+return x*this.w1+y*this.w2;
+}
+train(err,x,y){
+this.w1+=err*x*0.0001;
+this.w2+=err*y*0.0001;
+}
+}
+let aiBrain=new Brain();
 
-// touch
-let ty=0;
-document.getElementById("touchL").ontouchmove=e=>ty=e.touches[0].clientY;
+// ===== INIT =====
+function init(){
+left={x:20,y:c.height/2-70,w:15,h:140,s:8};
+right={x:c.width-35,y:c.height/2-70,w:15,h:140,s:8};
+ball={x:c.width/2,y:c.height/2,vx:7,vy:3,r:8};
+}
+
+// ===== MATCHMAKING (SIMULATED GLOBAL) =====
+function queue(){
+document.getElementById("match").style.display="flex";
+
+let ping=Math.floor(Math.random()*80+20);
+document.getElementById("ping").innerText="Ping: "+ping+"ms | Region: EU";
+
+setTimeout(()=>{
+document.getElementById("match").style.display="none";
+start();
+},1500);
+}
 
 // ===== START =====
 function start(){
-mode=document.getElementById("mode").value;
 document.getElementById("menu").style.display="none";
 document.getElementById("hud").style.display="block";
 init();
@@ -90,122 +127,74 @@ running=true;
 loop();
 }
 
-// ===== INIT =====
-function init(){
-left={x:20,y:c.height/2-70,w:15,h:140,s:8};
-right={x:c.width-35,y:c.height/2-70,w:15,h:140,s:8};
-
-ball={x:c.width/2,y:c.height/2,vx:7,vy:3,r:8};
-
-holes=[...Array(mode==="chaos"?3:1)].map(()=>({
-x:Math.random()*c.width,
-y:Math.random()*c.height,
-r:60
-}));
-}
-
-// ===== EFFECTS =====
-function boom(x,y){
-for(let i=0;i<15;i++){
-particles.push({x,y,vx:(Math.random()-0.5)*8,vy:(Math.random()-0.5)*8,life:40,h:Math.random()*360});
-}
-shake=10;
-}
-
-// ===== IA =====
+// ===== AI =====
 function ai(){
-if(mode==="multi") return;
-let skill=mode==="boss"?0.35:0.15;
-right.y+=(ball.y-right.h/2-right.y)*skill;
-}
+let inputX=ball.x/c.width;
+let inputY=ball.y/c.height;
 
-// ===== POWER =====
-function spawnPower(){
-if(Math.random()<0.01){
-powerups.push({x:Math.random()*c.width,y:Math.random()*c.height,type:Math.random()>0.5?"slow":"laser"});
-}
-}
+let output=aiBrain.predict(inputX,inputY);
 
-// ===== LASER =====
-function shoot(){
-lasers.push({x:left.x+20,y:left.y+60,vx:10});
-}
+// target
+let target=output*c.height;
 
-// ===== LOOP =====
-function loop(){
-if(!running)return;
-update();draw();requestAnimationFrame(loop);
+// move
+right.y+=(target-right.h/2-right.y)*0.2;
+
+// train (learning player style)
+let err=(ball.y-right.y);
+aiBrain.train(err,inputX,inputY);
 }
 
 // ===== UPDATE =====
 function update(){
 
-// PLAYER
-if(keys["KeyW"]) left.y-=left.s;
-if(keys["KeyS"]) left.y+=left.s;
-
-// TOUCH
-left.y+=(ty-left.y)*0.2;
-
-// AI
-ai();
+// player
+if(keys["KeyW"]) left.y-=8;
+if(keys["KeyS"]) left.y+=8;
 
 // clamp
 left.y=Math.max(0,Math.min(c.height-left.h,left.y));
 right.y=Math.max(0,Math.min(c.height-right.h,right.y));
 
-// chaos gravity
-if(mode!=="arcade") ball.vy+=0.1;
-
-// holes
-for(let h of holes){
-let dx=h.x-ball.x,dy=h.y-ball.y,d=Math.hypot(dx,dy);
-if(d<h.r){ball.vx+=dx*0.02;ball.vy+=dy*0.02;}
-}
+// IA
+ai();
 
 // ball
-ball.x+=ball.vx*slow;
-ball.y+=ball.vy*slow;
+ball.x+=ball.vx;
+ball.y+=ball.vy;
 
-// teleport
-if(Math.random()<0.005&&mode!=="arcade"){
-ball.x=Math.random()*c.width;
-ball.y=Math.random()*c.height;
-boom(ball.x,ball.y);
+// bounce
+if(ball.y<0||ball.y>c.height) ball.vy*=-1;
+
+// collision
+if(ball.x<left.x+left.w && ball.y>left.y && ball.y<left.y+left.h){
+ball.vx*=-1;
 }
-
-// walls
-if(ball.y<0||ball.y>c.height){ball.vy*=-1;boom(ball.x,ball.y)}
-
-// paddles
-if(ball.x<left.x+left.w&&ball.y>left.y&&ball.y<left.y+left.h){
-ball.vx*=-1;boom(ball.x,ball.y)
-}
-if(ball.x>right.x&&ball.y>right.y&&ball.y<right.y+right.h){
-ball.vx*=-1;boom(ball.x,ball.y)
+if(ball.x>right.x && ball.y>right.y && ball.y<right.y+right.h){
+ball.vx*=-1;
 }
 
 // score
-if(ball.x<0){scoreR++;xp++;reset()}
-if(ball.x>c.width){scoreL++;xp++;reset()}
-
-// lvl
-if(xp%10===0)level++;
-
-// power
-spawnPower();
-
-// lasers
-for(let l of lasers){
-l.x+=l.vx;
-if(l.x>right.x){scoreL+=2;boom(l.x,l.y);l.dead=true;}
+if(ball.x<0){scoreR();reset();}
+if(ball.x>c.width){scoreL();reset();}
 }
 
-// cleanup
-lasers=lasers.filter(l=>!l.dead);
+// ===== SCORE =====
+function scoreL(){
+xp+=10;
+mmr+=5;
+lvl=Math.floor(xp/100)+1;
+updateUI();
+}
 
-// slow toggle
-if(mode==="boss"&&Math.random()<0.002)slow=slow===1?0.4:1;
+function scoreR(){
+mmr-=5;
+updateUI();
+}
+
+function updateUI(){
+document.getElementById("lvl").innerText=lvl;
+document.getElementById("mmr").innerText=mmr;
 }
 
 // ===== RESET =====
@@ -216,53 +205,59 @@ ball.vx=(Math.random()>0.5?7:-7);
 ball.vy=(Math.random()-0.5)*6;
 }
 
-// ===== DRAW =====
+// ===== LOOP =====
+function loop(){
+if(!running)return;
+update();
+render();
+requestAnimationFrame(loop);
+}
+
+// ===== CYBER BLOOM SHADER (fake post process) =====
 let hue=0;
 
-function draw(){
-hue+=3;
+function render(){
+hue+=2;
 
-ctx.setTransform(1,0,0,1,(Math.random()-0.5)*shake,(Math.random()-0.5)*shake);
-shake*=0.9;
+// bloom effect
+ctx.fillStyle=`rgba(0,0,0,0.2)`;
+ctx.fillRect(0,0,c.width,c.height);
 
+// neon background
 ctx.fillStyle=`hsl(${hue},80%,10%)`;
-ctx.fillRect(-50,-50,c.width+100,c.height+100);
-
-// holes
-for(let h of holes){
-ctx.beginPath();ctx.fillStyle="black";ctx.arc(h.x,h.y,h.r,0,6.28);ctx.fill();
-}
+ctx.fillRect(0,0,c.width,c.height);
 
 // paddles
 ctx.fillStyle="white";
 ctx.fillRect(left.x,left.y,left.w,left.h);
 ctx.fillRect(right.x,right.y,right.w,right.h);
 
-// ball
+// ball glow
+ctx.shadowBlur=25;
+ctx.shadowColor="cyan";
+
 ctx.beginPath();
-ctx.fillStyle="cyan";
-ctx.arc(ball.x,ball.y,ball.r,0,6.28);
+ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
 ctx.fill();
 
-// particles
-for(let p of particles){
-p.x+=p.vx;p.y+=p.vy;p.life--;
-ctx.fillStyle=`hsl(${p.h},100%,60%)`;
-ctx.fillRect(p.x,p.y,3,3);
-}
-particles=particles.filter(p=>p.life>0);
-
-// lasers
-for(let l of lasers){
-ctx.fillStyle="red";
-ctx.fillRect(l.x,l.y,10,3);
+// UI
+document.getElementById("l").innerText=0;
+document.getElementById("r").innerText=0;
 }
 
-// HUD
-document.getElementById("l").textContent=scoreL;
-document.getElementById("r").textContent=scoreR;
-document.getElementById("xp").textContent=xp;
-document.getElementById("lv").textContent=level;
+// ===== INPUT =====
+let keys={};
+addEventListener("keydown",e=>keys[e.code]=true);
+addEventListener("keyup",e=>keys[e.code]=false);
+
+// ===== PWA (INLINE MOCK) =====
+if('serviceWorker' in navigator){
+const sw=`
+self.addEventListener('install',e=>self.skipWaiting());
+self.addEventListener('fetch',e=>{});
+`;
+const blob=new Blob([sw],{type:'text/javascript'});
+navigator.serviceWorker.register(URL.createObjectURL(blob));
 }
 </script>
 
