@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Football Game ⚽</title>
+<title>Football OK ⚽</title>
 <style>
 body { margin:0; overflow:hidden; background:#1b5e20; }
 canvas { display:block; }
@@ -16,62 +16,14 @@ canvas { display:block; }
 const c=document.getElementById("game");
 const ctx=c.getContext("2d");
 
-function r(){
-  c.width=window.innerWidth;
-  c.height=window.innerHeight;
+function resize(){
+c.width=window.innerWidth;
+c.height=window.innerHeight;
 }
-r();
-window.addEventListener("resize",r);
+resize();
+window.addEventListener("resize",resize);
 
 let p={x:100,y:100};
-let b={x:130,y:100};
-let owned=true;
-let e=[{x:500,y:200},{x:600,y:300}];
-let score=0;
-
-let k={};
-document.addEventListener("keydown",a=>k[a.code]=true);
-document.addEventListener("keyup",a=>k[a.code]=false);
-
-function u(){
-
-if(k["ArrowUp"])p.y-=5;
-if(k["ArrowDown"])p.y+=5;
-if(k["ArrowLeft"])p.x-=5;
-if(k["ArrowRight"])p.x+=5;
-
-if(k["Space"]&&owned){
-owned=false;
-}
-
-if(owned){
-b.x=p.x+10;
-b.y=p.y;
-}
-
-e.forEach(x=>{
-if(x.x<b.x)x.x+=2;
-if(x.x>b.x)x.x-=2;
-if(x.y<b.y)x.y+=2;
-if(x.y>b.y)x.y-=2;
-
-if(Math.hypot(x.x-b.x,x.y-b.y)<15)owned=false;
-});
-
-if(b.x<10){
-score++;
-reset();
-}
-
-draw();
-requestAnimationFrame(u);
-}
-
-function reset(){
-p={x:100,y:100};
-b={x:130,y:100};
-owned=true;
-}
 
 function draw(){
 ctx.clearRect(0,0,c.width,c.height);
@@ -80,20 +32,18 @@ ctx.fillStyle="#2e7d32";
 ctx.fillRect(0,0,c.width,c.height);
 
 ctx.fillStyle="blue";
-ctx.fillRect(p.x,p.y,20,20);
-
-ctx.fillStyle="red";
-e.forEach(x=>ctx.fillRect(x.x,x.y,20,20));
+ctx.fillRect(p.x,p.y,30,30);
 
 ctx.fillStyle="white";
-ctx.beginPath();
-ctx.arc(b.x,b.y,6,0,Math.PI*2);
-ctx.fill();
-
-ctx.fillText("Score:"+score,20,30);
+ctx.font="30px Arial";
+ctx.fillText("SI TU VOIS CA = CA MARCHE ⚽",50,50);
 }
 
-u();
+function loop(){
+draw();
+requestAnimationFrame(loop);
+}
+loop();
 </script>
 
 </body>
