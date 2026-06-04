@@ -1,93 +1,11 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<title>Ultra Neon Rings ⚡</title>
-
-<style>
-body{
-margin:0;
-overflow:hidden;
-font-family:Arial;
-background:black;
-}
-
-canvas{display:block;}
-
-/* MENU */
-#menu{
-position:absolute;
-top:0;left:0;
-width:100%;
-height:100%;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-color:white;
-z-index:10;
-background:linear-gradient(45deg,#0f0c29,#302b63,#ff00cc,#00ffcc);
-background-size:400% 400%;
-animation:moveBg 6s infinite alternate;
-}
-
-@keyframes moveBg{
-0%{background-position:0% 50%;}
-100%{background-position:100% 50%;}
-}
-
-button{
-padding:12px 20px;
-font-size:18px;
-border:none;
-border-radius:10px;
-cursor:pointer;
-background:#00ffcc;
-color:black;
-margin-top:10px;
-}
-
-/* HUD */
-#hud{
-position:absolute;
-top:10px;
-left:10px;
-color:white;
-z-index:5;
-display:none;
-}
-</style>
-</head>
-
-<body>
-
-<div id="menu">
-<h1>⚡ NEON RINGS ⚡</h1>
-<button onclick="startGame()">START</button>
-<p>Arrow keys = move | Touch rings ⚪</p>
-</div>
-
-<div id="hud">
-Score: <span id="score">0</span>
-</div>
-
-<canvas id="game"></canvas>
-
 <script>
 const c=document.getElementById("game");
 const ctx=c.getContext("2d");
 
-function resize(){
-c.width=window.innerWidth;
-c.height=window.innerHeight;
-}
-resize();
-window.addEventListener("resize",resize);
-
-// 🌈 background animation
+// ⚡ fond animation (jeu seulement)
 let hue=0;
 
-// ⚪ player (VERT + VIOLET GLOW)
+// ⚪ player
 let ball={
 x:200,
 y:200,
@@ -107,18 +25,20 @@ let keys={};
 document.addEventListener("keydown",e=>keys[e.code]=true);
 document.addEventListener("keyup",e=>keys[e.code]=false);
 
-// START
+// START (NE CHANGE PAS TON BOUTON)
 function startGame(){
 document.getElementById("menu").style.display="none";
 document.getElementById("hud").style.display="block";
+
 running=true;
 
-for(let i=0;i<18;i++) spawnRing();
+// spawn rings
+for(let i=0;i<15;i++) spawnRing();
 
 loop();
 }
 
-// spawn ring
+// spawn
 function spawnRing(){
 rings.push({
 x:Math.random()*c.width,
@@ -130,7 +50,7 @@ color:"white"
 
 // 💥 explosion
 function explosion(x,y){
-for(let i=0;i<18;i++){
+for(let i=0;i<15;i++){
 particles.push({
 x,
 y,
@@ -153,15 +73,15 @@ requestAnimationFrame(loop);
 // UPDATE
 function update(){
 
-hue+=1;
+hue+=0.8;
 
-// move ball
+// move
 if(keys["ArrowUp"]) ball.y-=ball.speed;
 if(keys["ArrowDown"]) ball.y+=ball.speed;
 if(keys["ArrowLeft"]) ball.x-=ball.speed;
 if(keys["ArrowRight"]) ball.x+=ball.speed;
 
-// limits
+// limit
 ball.x=Math.max(0,Math.min(c.width,ball.x));
 ball.y=Math.max(0,Math.min(c.height,ball.y));
 
@@ -173,10 +93,10 @@ let d=Math.hypot(ball.x-r.x,ball.y-r.y);
 
 if(d<r.r){
 
-// 💥 effect touch
+// 💥 EFFECT TOUCH
 explosion(ball.x,ball.y);
 
-score+=1;
+score++;
 
 rings.splice(i,1);
 spawnRing();
@@ -199,9 +119,11 @@ document.getElementById("score").innerText=score;
 // DRAW
 function draw(){
 
-// 🌈 animated background
+// 🌈 fond animé UNIQUEMENT EN JEU
+if(running){
 ctx.fillStyle=`hsl(${hue},60%,10%)`;
 ctx.fillRect(0,0,c.width,c.height);
+}
 
 // rings
 rings.forEach(r=>{
@@ -219,8 +141,8 @@ ctx.fillStyle="rgba(255,255,255,0.7)";
 ctx.fillRect(p.x,p.y,3,3);
 });
 
-// ⚪ PLAYER (VERT + VIOLET GLOW)
-ctx.shadowBlur=20;
+// ⚪ PLAYER (VERT + GLOW VIOLET)
+ctx.shadowBlur=25;
 ctx.shadowColor="purple";
 
 ctx.fillStyle="#00ff88";
@@ -232,6 +154,3 @@ ctx.shadowBlur=0;
 }
 
 </script>
-
-</body>
-</html>
