@@ -2,17 +2,15 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Ball Rings Game ⚪</title>
+<title>Interactive Rings ⚪🌈</title>
 
 <style>
 body{
 margin:0;
 overflow:hidden;
-background:#111;
+font-family:Arial;
 }
-canvas{
-display:block;
-}
+canvas{display:block;}
 </style>
 </head>
 
@@ -31,61 +29,69 @@ c.height=window.innerHeight;
 resize();
 window.addEventListener("resize",resize);
 
-// ⚪ balle
+// 🌈 fond dynamique
+let hue=0;
+
+// ⚪ balle contrôlée
 let ball={
 x:200,
 y:200,
-vx:3,
-vy:2,
-r:8
+r:10,
+speed:5
 };
+
+// 🎮 touches
+let keys={};
+document.addEventListener("keydown",e=>keys[e.code]=true);
+document.addEventListener("keyup",e=>keys[e.code]=false);
 
 // 🔵 cercles
 let rings=[];
+for(let i=0;i<6;i++) spawnRing();
+
+function spawnRing(){
+rings.push({
+x:Math.random()*c.width,
+y:Math.random()*c.height,
+r:50,
+color:"white"
+});
+}
 
 // 💰 score
 let score=0;
 
-// 🎮 créer un cercle
-function newRing(){
-rings.push({
-x:Math.random()*c.width,
-y:Math.random()*c.height,
-r:40,
-color:"white",
-passed:false
-});
-}
-
-// init cercles
-for(let i=0;i<5;i++) newRing();
-
 // 🎮 update
 function update(){
 
-// mouvement balle
-ball.x+=ball.vx;
-ball.y+=ball.vy;
+// 🌈 fond change couleur
+hue+=0.5;
+if(hue>360) hue=0;
 
-// rebond murs
-if(ball.x<0 || ball.x>c.width) ball.vx*=-1;
-if(ball.y<0 || ball.y>c.height) ball.vy*=-1;
+// move balle (INTERACTIF)
+if(keys["ArrowUp"]) ball.y-=ball.speed;
+if(keys["ArrowDown"]) ball.y+=ball.speed;
+if(keys["ArrowLeft"]) ball.x-=ball.speed;
+if(keys["ArrowRight"]) ball.x+=ball.speed;
+
+// limiter écran
+ball.x=Math.max(0,Math.min(c.width,ball.x));
+ball.y=Math.max(0,Math.min(c.height,ball.y));
 
 // collision cercles
 rings.forEach(r=>{
 
 let d=Math.hypot(ball.x-r.x,ball.y-r.y);
 
-if(d<r.r && !r.passed){
-r.passed=true;
+if(d<r.r){
 r.color=randomColor();
 score++;
 
-// nouveau cercle après réussite
+// nouveau cercle
 setTimeout(()=>{
 rings.splice(rings.indexOf(r),1);
-newRing();
-},300);
+spawnRing();
+},200);
 }
 
 });
@@ -99,12 +105,14 @@ function randomColor(){
 return `hsl(${Math.random()*360},100%,60%)`;
 }
 
-// 🎨 draw
+// 🎨 DRAW
 function draw(){
 
-ctx.clearRect(0,0,c.width,c.height);
+// 🌈 fond animé
+ctx.fillStyle=`hsl(${hue},60%,10%)`;
+ctx.fillRect(0,0,c.width,c.height);
 
-// cercles
+// 🔵 cercles
 rings.forEach(r=>{
 ctx.strokeStyle=r.color;
 ctx.lineWidth=5;
@@ -114,20 +122,20 @@ ctx.arc(r.x,r.y,r.r,0,Math.PI*2);
 ctx.stroke();
 });
 
-// balle
+// ⚪ balle
 ctx.fillStyle="white";
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
 ctx.fill();
 
-// score
+// 💰 score
 ctx.fillStyle="white";
 ctx.font="30px Arial";
 ctx.fillText("Score: "+score,20,40);
 
-// info
+// instructions
 ctx.font="16px Arial";
-ctx.fillText("La balle traverse les cercles en continu ⚪🌈",20,70);
+ctx.fillText("Arrow keys = move | traverse rings ⚪🌈",20,70);
 }
 
 update();
