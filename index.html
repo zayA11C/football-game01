@@ -2,102 +2,117 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Football Pro ⚽</title>
+<title>Football Pro Full Screen ⚽</title>
 
 <style>
 body {
   margin: 0;
-  background: #1b5e20;
-  text-align: center;
+  overflow: hidden;
+  background: black;
   font-family: Arial;
-  color: white;
 }
-
 canvas {
-  background: #2e7d32;
   display: block;
-  margin: auto;
-  border: 4px solid white;
 }
 </style>
 </head>
 
 <body>
 
-<h2>⚽ Football Pro</h2>
-<p>Flèches = bouger | ESPACE = tirer</p>
-
-<canvas id="game" width="900" height="500"></canvas>
+<canvas id="game"></canvas>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// ⚽ joueurs (style "personnes")
-let player = {x:120, y:250};
-let enemies = [
-  {x:600, y:200},
-  {x:650, y:350},
-  {x:700, y:150}
-];
+// 🖥️ plein écran
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+// ⚽ joueur
+let player = {x:100, y:200, speed:6};
 
 // ⚽ balle
-let ball = {x:140, y:250};
+let ball = {x:120, y:200};
 let owned = true;
-let speedX = 0;
+let ballSpeedX = 0;
+
+// 🤖 ennemis
+let enemies = [
+  {x:500,y:200},
+  {x:600,y:300},
+  {x:700,y:150}
+];
 
 // 🥅 but
-let goal = {x:860, y:200, w:20, h:120};
+let goal = {x:window.innerWidth-40, y:200, w:20, h:150};
 
 let score = 0;
 
-// 🎮 contrôles
+// 🎮 clavier
 let keys = {};
 document.addEventListener("keydown", e => keys[e.key]=true);
 document.addEventListener("keyup", e => keys[e.key]=false);
 
-// 🎨 terrain stylé
+// 🎨 terrain
 function drawField(){
-  ctx.fillStyle = "#2e7d32";
-  ctx.fillRect(0,0,900,500);
+  ctx.fillStyle = "#1b5e20";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 3;
 
   // ligne centrale
-  ctx.strokeStyle = "white";
   ctx.beginPath();
-  ctx.moveTo(450,0);
-  ctx.lineTo(450,500);
+  ctx.moveTo(canvas.width/2,0);
+  ctx.lineTo(canvas.width/2,canvas.height);
   ctx.stroke();
 
   // cercle centre
   ctx.beginPath();
-  ctx.arc(450,250,60,0,Math.PI*2);
+  ctx.arc(canvas.width/2,canvas.height/2,80,0,Math.PI*2);
   ctx.stroke();
 
   // surface de but
-  ctx.strokeRect(820,150,80,200);
+  ctx.strokeRect(canvas.width-120,canvas.height/2-100,100,200);
+}
+
+// 👤 joueur stylé
+function drawPlayer(x,y,color){
+  ctx.fillStyle = "#ffcc80";
+  ctx.beginPath();
+  ctx.arc(x,y,10,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle = color;
+  ctx.fillRect(x-6,y+10,12,25);
 }
 
 // 🔁 update
 function update(){
 
   // mouvement joueur
-  if(keys["ArrowUp"]) player.y -= 5;
-  if(keys["ArrowDown"]) player.y += 5;
-  if(keys["ArrowLeft"]) player.x -= 5;
-  if(keys["ArrowRight"]) player.x += 5;
+  if(keys["ArrowUp"]) player.y -= player.speed;
+  if(keys["ArrowDown"]) player.y += player.speed;
+  if(keys["ArrowLeft"]) player.x -= player.speed;
+  if(keys["ArrowRight"]) player.x += player.speed;
 
   // tir
   if(keys[" "] && owned){
     owned = false;
-    speedX = 9;
+    ballSpeedX = 10;
   }
 
   // balle suit joueur
   if(owned){
-    ball.x = player.x + 10;
-    ball.y = player.y + 10;
+    ball.x = player.x;
+    ball.y = player.y;
   } else {
-    ball.x += speedX;
+    ball.x += ballSpeedX;
   }
 
   // 🤖 ennemis suivent balle
@@ -107,39 +122,32 @@ function update(){
     if(e.y < ball.y) e.y += 2.5;
     if(e.y > ball.y) e.y -= 2.5;
 
-    // vol balle
     if(Math.hypot(e.x-ball.x,e.y-ball.y)<15){
       owned = false;
     }
   });
 
   // ⚽ but
-  if(ball.x > goal.x && ball.y > goal.y && ball.y < goal.y + goal.h){
+  if(ball.x > canvas.width-40 &&
+     ball.y > canvas.height/2-75 &&
+     ball.y < canvas.height/2+75){
     score++;
-    player.x = 120;
-    player.y = 250;
+
+    player.x = 100;
+    player.y = canvas.height/2;
+
+    ball.x = player.x;
+    ball.y = player.y;
+
     owned = true;
-    speedX = 0;
+    ballSpeedX = 0;
   }
 
   draw();
   requestAnimationFrame(update);
 }
 
-// 🎨 dessin "vrais joueurs"
-function drawPlayer(x,y,color){
-  // tête
-  ctx.fillStyle = "#ffcc80";
-  ctx.beginPath();
-  ctx.arc(x,y,8,0,Math.PI*2);
-  ctx.fill();
-
-  // corps
-  ctx.fillStyle = color;
-  ctx.fillRect(x-5,y+8,10,18);
-}
-
-// 🖌️ dessin
+// 🎨 dessin
 function draw(){
 
   drawField();
@@ -153,19 +161,15 @@ function draw(){
   });
 
   // balle
-  ctx.fillStyle = "white";
+  ctx.fillStyle="white";
   ctx.beginPath();
-  ctx.arc(ball.x,ball.y,5,0,Math.PI*2);
+  ctx.arc(ball.x,ball.y,6,0,Math.PI*2);
   ctx.fill();
 
-  // but
-  ctx.fillStyle = "white";
-  ctx.fillRect(goal.x,goal.y,goal.w,goal.h);
-
   // score
-  ctx.fillStyle = "white";
-  ctx.font = "20px Arial";
-  ctx.fillText("Score: " + score, 20, 30);
+  ctx.fillStyle="white";
+  ctx.font="30px Arial";
+  ctx.fillText("Score: "+score,20,40);
 }
 
 update();
