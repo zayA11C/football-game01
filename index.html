@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>GTA Character Test</title>
+<title>GTA Prototype</title>
 <style>
 body { margin:0; overflow:hidden; }
 #ui{
@@ -19,13 +19,14 @@ body { margin:0; overflow:hidden; }
 <body>
 
 <div id="ui">
-🎮 GTA 3rd Person<br>
-WASD = bouger | souris = caméra
+🎮 GTA PROTOTYPE<br>
+WASD = bouger | SHIFT = courir | E = voiture
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
 <script>
+
 // ================= SCENE =================
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
@@ -34,7 +35,7 @@ scene.background = new THREE.Color(0x87ceeb);
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 
 // ================= RENDERER =================
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
@@ -45,21 +46,45 @@ scene.add(light);
 
 // ================= GROUND =================
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(200,200),
+  new THREE.PlaneGeometry(300,300),
   new THREE.MeshLambertMaterial({color:0x2ecc71})
 );
 ground.rotation.x = -Math.PI/2;
 scene.add(ground);
 
-// ================= "VRAI BONHOMME" =================
+// ================= CITY =================
+let buildings = [];
+
+for(let i=0;i<60;i++){
+  let b = new THREE.Mesh(
+    new THREE.BoxGeometry(
+      Math.random()*5+2,
+      Math.random()*20+5,
+      Math.random()*5+2
+    ),
+    new THREE.MeshLambertMaterial({color:0x888888})
+  );
+
+  b.position.set(
+    (Math.random()-0.5)*200,
+    0,
+    (Math.random()-0.5)*200
+  );
+
+  b.position.y = b.geometry.parameters.height/2;
+  scene.add(b);
+  buildings.push(b);
+}
+
+// ================= PLAYER =================
 const player = new THREE.Group();
 
 // corps
 const body = new THREE.Mesh(
-  new THREE.BoxGeometry(1,1.5,0.5),
+  new THREE.BoxGeometry(1,2,0.5),
   new THREE.MeshLambertMaterial({color:0x1565c0})
 );
-body.position.y = 1.5;
+body.position.y = 1;
 player.add(body);
 
 // tête
@@ -67,47 +92,54 @@ const head = new THREE.Mesh(
   new THREE.SphereGeometry(0.4,16,16),
   new THREE.MeshLambertMaterial({color:0xffcc99})
 );
-head.position.y = 2.6;
+head.position.y = 2.3;
 player.add(head);
 
-// jambes
-const legGeo = new THREE.BoxGeometry(0.3,1,0.3);
-
-const leg1 = new THREE.Mesh(legGeo,new THREE.MeshLambertMaterial({color:0x333}));
-leg1.position.set(-0.3,0.5,0);
-player.add(leg1);
-
-const leg2 = leg1.clone();
-leg2.position.x = 0.3;
-player.add(leg2);
-
-// bras
-const armGeo = new THREE.BoxGeometry(0.3,1,0.3);
-
-const arm1 = new THREE.Mesh(armGeo,new THREE.MeshLambertMaterial({color:0x1565c0}));
-arm1.position.set(-0.8,1.8,0);
-player.add(arm1);
-
-const arm2 = arm1.clone();
-arm2.position.x = 0.8;
-player.add(arm2);
-
 scene.add(player);
+
+// ================= CAR =================
+let car = new THREE.Mesh(
+  new THREE.BoxGeometry(2,1,4),
+  new THREE.MeshLambertMaterial({color:0xff0000})
+);
+car.position.set(5,0.5,5);
+scene.add(car);
+
+let inCar = false;
+
+// ================= NPC =================
+let npcs = [];
+
+for(let i=0;i<10;i++){
+  let npc = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.5,1),
+    new THREE.MeshLambertMaterial({color:0xffff00})
+  );
+
+  npc.position.set(
+    (Math.random()-0.5)*100,
+    1,
+    (Math.random()-0.5)*100
+  );
+
+  scene.add(npc);
+  npcs.push(npc);
+}
 
 // ================= INPUT =================
 let keys = {};
 document.addEventListener("keydown", e=>keys[e.key.toLowerCase()]=true);
 document.addEventListener("keyup", e=>keys[e.key.toLowerCase()]=false);
 
-// caméra rotation souris
+// ================= CAMERA =================
 let camAngle = 0;
-document.addEventListener("mousemove", (e)=>{
+document.addEventListener("mousemove",(e)=>{
   camAngle += e.movementX * 0.002;
 });
 
-// ================= MOVE =================
-function move(){
-  let speed = 0.12;
+// ================= MOVE PLAYER =================
+function movePlayer(){
+  let speed = keys["shift"] ? 0.25 : 0.12;
 
   let fx = Math.sin(camAngle);
   let fz = Math.cos(camAngle);
@@ -132,33 +164,63 @@ function move(){
     player.position.z += rz * speed;
   }
 
-  // tourner le perso vers direction caméra
   player.rotation.y = camAngle;
 }
 
+// ================= CAR SYSTEM =================
+function driveCar(){
+  let speed = 0.3;
+
+  if(keys["w"]) car.position.z -= Math.cos(camAngle)*speed;
+  if(keys["s"]) car.position.z += Math.cos(camAngle)*speed;
+  if(keys["a"]) car.position.x -= Math.sin(camAngle)*speed;
+  if(keys["d"]) car.position.x += Math.sin(camAngle)*speed;
+
+  camera.position.x = car.position.x - Math.sin(camAngle)*6;
+  camera.position.z = car.position.z - Math.cos(camAngle)*6;
+  camera.position.y = 3;
+  camera.lookAt(car.position);
+}
+
+// ================= INTERACT =================
+document.addEventListener("keydown", e=>{
+  if(e.key.toLowerCase()==="e"){
+    let dist = player.position.distanceTo(car.position);
+    if(dist < 3){
+      inCar = !inCar;
+    }
+  }
+});
+
 // ================= CAMERA FOLLOW =================
 function updateCamera(){
-  const dist = 6;
-  const height = 3;
+  let target = inCar ? car : player;
 
-  camera.position.x = player.position.x - Math.sin(camAngle) * dist;
-  camera.position.z = player.position.z - Math.cos(camAngle) * dist;
-  camera.position.y = player.position.y + height;
+  let dist = 6;
 
-  camera.lookAt(player.position);
+  camera.position.x = target.position.x - Math.sin(camAngle)*dist;
+  camera.position.z = target.position.z - Math.cos(camAngle)*dist;
+  camera.position.y = target.position.y + 3;
+
+  camera.lookAt(target.position);
 }
 
 // ================= LOOP =================
 function animate(){
   requestAnimationFrame(animate);
 
-  move();
-  updateCamera();
+  if(!inCar){
+    movePlayer();
+  } else {
+    driveCar();
+  }
 
+  updateCamera();
   renderer.render(scene,camera);
 }
 
 animate();
+
 </script>
 
 </body>
