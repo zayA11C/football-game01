@@ -1,11 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Neon Rings Game ⚡</title>
+
+<style>
+body{
+margin:0;
+overflow:hidden;
+font-family:Arial;
+background:black;
+}
+
+canvas{display:block;}
+
+/* ===== MENU (NE PAS TOUCHER) ===== */
+#menu{
+position:absolute;
+top:0;left:0;
+width:100%;
+height:100%;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+color:white;
+z-index:10;
+background:linear-gradient(45deg,#0f0c29,#302b63,#ff00cc,#00ffcc);
+background-size:400% 400%;
+animation:moveBg 6s infinite alternate;
+}
+
+@keyframes moveBg{
+0%{background-position:0% 50%;}
+100%{background-position:100% 50%;}
+}
+
+button{
+padding:12px 20px;
+font-size:18px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+background:#00ffcc;
+color:black;
+margin-top:10px;
+}
+
+/* HUD */
+#hud{
+position:absolute;
+top:10px;
+left:10px;
+color:white;
+z-index:5;
+display:none;
+font-size:18px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- MENU -->
+<div id="menu">
+<h1>⚡ NEON RINGS ⚡</h1>
+<button onclick="startGame()">START</button>
+<p>Arrow keys = move ⚪</p>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+Score: <span id="score">0</span>
+</div>
+
+<canvas id="game"></canvas>
+
 <script>
 const c=document.getElementById("game");
 const ctx=c.getContext("2d");
 
-// ⚡ fond animation (jeu seulement)
+function resize(){
+c.width=window.innerWidth;
+c.height=window.innerHeight;
+}
+resize();
+window.addEventListener("resize",resize);
+
+// ================= GAME STATE =================
+let running=false;
 let hue=0;
 
-// ⚪ player
+// ⚪ PLAYER (VERT + GLOW VIOLET)
 let ball={
 x:200,
 y:200,
@@ -13,32 +99,35 @@ r:12,
 speed:5
 };
 
-// 🔵 rings
+// 🔵 RINGS
 let rings=[];
 let particles=[];
 
+// 💰 SCORE
 let score=0;
-let running=false;
 
-// input
+// INPUT
 let keys={};
 document.addEventListener("keydown",e=>keys[e.code]=true);
 document.addEventListener("keyup",e=>keys[e.code]=false);
 
-// START (NE CHANGE PAS TON BOUTON)
+// ================= START =================
 function startGame(){
 document.getElementById("menu").style.display="none";
 document.getElementById("hud").style.display="block";
 
 running=true;
 
-// spawn rings
-for(let i=0;i<15;i++) spawnRing();
+score=0;
+rings=[];
+particles=[];
+
+for(let i=0;i<18;i++) spawnRing();
 
 loop();
 }
 
-// spawn
+// ================= SPAWN =================
 function spawnRing(){
 rings.push({
 x:Math.random()*c.width,
@@ -48,9 +137,9 @@ color:"white"
 });
 }
 
-// 💥 explosion
+// ================= EXPLOSION =================
 function explosion(x,y){
-for(let i=0;i<15;i++){
+for(let i=0;i<18;i++){
 particles.push({
 x,
 y,
@@ -61,7 +150,7 @@ life:40
 }
 }
 
-// LOOP
+// ================= LOOP =================
 function loop(){
 if(!running) return;
 
@@ -70,22 +159,22 @@ draw();
 requestAnimationFrame(loop);
 }
 
-// UPDATE
+// ================= UPDATE =================
 function update(){
 
 hue+=0.8;
 
-// move
+// MOVE PLAYER
 if(keys["ArrowUp"]) ball.y-=ball.speed;
 if(keys["ArrowDown"]) ball.y+=ball.speed;
 if(keys["ArrowLeft"]) ball.x-=ball.speed;
 if(keys["ArrowRight"]) ball.x+=ball.speed;
 
-// limit
+// LIMITS
 ball.x=Math.max(0,Math.min(c.width,ball.x));
 ball.y=Math.max(0,Math.min(c.height,ball.y));
 
-// rings
+// RINGS COLLISION
 for(let i=rings.length-1;i>=0;i--){
 let r=rings[i];
 
@@ -93,7 +182,7 @@ let d=Math.hypot(ball.x-r.x,ball.y-r.y);
 
 if(d<r.r){
 
-// 💥 EFFECT TOUCH
+// 💥 EFFECT
 explosion(ball.x,ball.y);
 
 score++;
@@ -103,9 +192,10 @@ spawnRing();
 }
 }
 
-// particles
+// PARTICLES
 for(let i=particles.length-1;i>=0;i--){
 let p=particles[i];
+
 p.x+=p.vx;
 p.y+=p.vy;
 p.life--;
@@ -113,19 +203,20 @@ p.life--;
 if(p.life<=0) particles.splice(i,1);
 }
 
+// SCORE UI
 document.getElementById("score").innerText=score;
 }
 
-// DRAW
+// ================= DRAW =================
 function draw(){
 
-// 🌈 fond animé UNIQUEMENT EN JEU
+// 🌈 BACKGROUND (ONLY IN GAME)
 if(running){
 ctx.fillStyle=`hsl(${hue},60%,10%)`;
 ctx.fillRect(0,0,c.width,c.height);
 }
 
-// rings
+// 🔵 RINGS
 rings.forEach(r=>{
 ctx.strokeStyle="white";
 ctx.lineWidth=4;
@@ -135,13 +226,13 @@ ctx.arc(r.x,r.y,r.r,0,Math.PI*2);
 ctx.stroke();
 });
 
-// particles
+// 💥 PARTICLES
 particles.forEach(p=>{
 ctx.fillStyle="rgba(255,255,255,0.7)";
 ctx.fillRect(p.x,p.y,3,3);
 });
 
-// ⚪ PLAYER (VERT + GLOW VIOLET)
+// ⚪ PLAYER (VERT + PURPLE GLOW)
 ctx.shadowBlur=25;
 ctx.shadowColor="purple";
 
@@ -154,3 +245,6 @@ ctx.shadowBlur=0;
 }
 
 </script>
+
+</body>
+</html>
