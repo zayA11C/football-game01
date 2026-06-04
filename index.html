@@ -1,119 +1,126 @@
-import random
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Farm Game</title>
+<style>
+body {
+    font-family: Arial;
+    background: #e6f7e6;
+    text-align: center;
+}
+.container {
+    background: white;
+    padding: 20px;
+    margin: 20px auto;
+    width: 350px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px gray;
+}
+button {
+    margin: 5px;
+    padding: 10px;
+    cursor: pointer;
+}
+</style>
+</head>
+<body>
 
-class FarmGame:
-    def __init__(self):
-        self.or_ = 10
-        self.ble = 0
-        self.energie = 3
-        self.champs = 1
-        self.poules = 0
-        self.niveau = 1
-        self.jour = 1
+<h1>🌾 FARMING GAME</h1>
 
-    # ---------- UTIL ----------
-    def status(self):
-        print("\n--- STATUS ---")
-        print(f"Jour: {self.jour}")
-        print(f"Or: {self.or_}")
-        print(f"Blé: {self.ble}")
-        print(f"Énergie: {self.energie}")
-        print(f"Champs: {self.champs}")
-        print(f"Poules: {self.poules}")
-        print("----------------\n")
+<div class="container">
+    <p id="status"></p>
 
-    def event(self):
-        events = [
-            ("🌧️ Pluie abondante", 1.5),
-            ("🐀 Rats affamés", 0.9),
-            ("🧑‍🌾 Marchand généreux", 1.2),
-            ("⚡ Tempête", 0.8),
-            ("☀️ Journée normale", 1.0),
-        ]
-        ev = random.choice(events)
-        print(f"ÉVÉNEMENT : {ev[0]}")
-        return ev[1]
+    <button onclick="action('planter')">🌱 Planter</button>
+    <button onclick="action('recolter')">🌾 Récolter</button>
+    <button onclick="action('vendre')">🏪 Vendre</button>
+    <button onclick="action('elever')">🐔 Élever</button>
+    <button onclick="action('ameliorer')">🔧 Améliorer</button>
+    <button onclick="nextDay()">⏭️ Jour suivant</button>
+</div>
 
-    # ---------- ACTIONS ----------
-    def planter(self):
-        gain = self.champs * 2
-        self.ble += gain
-        print(f"🌱 Tu plantes et gagnes {gain} blé.")
+<script>
+let state = {
+    or: 10,
+    ble: 0,
+    champs: 1,
+    poules: 0,
+    jour: 1,
+    actions: 3,
+    bonus: 1
+};
 
-    def recolter(self, bonus):
-        gain = int(self.champs * 2 * bonus)
-        self.ble += gain
-        print(f"🌾 Tu récoltes {gain} blé.")
+function event() {
+    let events = [
+        ["🌧️ Pluie", 1.5],
+        ["🐀 Rats", 0.9],
+        ["🧑‍🌾 Marchand", 1.2],
+        ["☀️ Normal", 1.0]
+    ];
+    let e = events[Math.floor(Math.random() * events.length)];
+    state.bonus = e[1];
+    alert("ÉVÉNEMENT: " + e[0]);
+}
 
-    def vendre(self):
-        gain = self.ble // 2
-        self.or_ += gain
-        print(f"🏪 Tu vends pour {gain} or.")
-        self.ble = 0
+function update() {
+    document.getElementById("status").innerHTML =
+        "Jour: " + state.jour + "<br>" +
+        "Or: " + state.or + "<br>" +
+        "Blé: " + state.ble + "<br>" +
+        "Champs: " + state.champs + "<br>" +
+        "Poules: " + state.poules + "<br>" +
+        "Actions restantes: " + state.actions;
+}
 
-    def elever(self):
-        self.poules += 1
-        print("🐔 Tu ajoutes une poule (+production future).")
+function action(type) {
+    if (state.actions <= 0) {
+        alert("Plus d'actions aujourd'hui !");
+        return;
+    }
 
-    def ameliorer(self):
-        if self.or_ >= 20:
-            self.or_ -= 20
-            self.champs += 1
-            print("🔧 Amélioration: +1 champ")
-        else:
-            print("❌ Pas assez d'or (20 requis)")
+    if (type === "planter") {
+        state.ble += state.champs * 2;
+    }
 
-    def repos(self):
-        self.energie = 3
-        print("😴 Tu te reposes et récupères ton énergie.")
+    if (type === "recolter") {
+        state.ble += Math.floor(state.champs * 2 * state.bonus);
+    }
 
-    # ---------- TOUR ----------
-    def jouer_tour(self):
-        print(f"\n===== JOUR {self.jour} =====")
+    if (type === "vendre") {
+        state.or += Math.floor(state.ble / 2);
+        state.ble = 0;
+    }
 
-        bonus = self.event()
+    if (type === "elever") {
+        state.poules += 1;
+    }
 
-        actions = 3
-        self.energie = 3
+    if (type === "ameliorer") {
+        if (state.or >= 20) {
+            state.or -= 20;
+            state.champs += 1;
+        } else {
+            alert("Pas assez d'or !");
+        }
+    }
 
-        while actions > 0:
-            self.status()
-            print("Actions possibles: planter / recolter / vendre / elever / ameliorer / repos")
-            choix = input("Choisis une action: ").lower()
+    state.actions--;
+    update();
+}
 
-            if choix == "planter":
-                self.planter()
-            elif choix == "recolter":
-                self.recolter(bonus)
-            elif choix == "vendre":
-                self.vendre()
-            elif choix == "elever":
-                self.elever()
-            elif choix == "ameliorer":
-                self.ameliorer()
-            elif choix == "repos":
-                self.repos()
-                break
-            else:
-                print("Action inconnue.")
-                continue
+function nextDay() {
+    state.jour++;
+    state.actions = 3;
+    event();
 
-            actions -= 1
+    state.ble += state.poules * 2;
 
-        # production poules
-        self.ble += self.poules * 2
-        print(f"🐔 Tes poules produisent {self.poules * 2} blé.")
+    update();
+}
 
-        self.jour += 1
+event();
+update();
+</script>
 
-    def jouer(self):
-        while self.or_ < 10000:
-            self.jouer_tour()
-
-            if self.or_ >= 10000:
-                print("\n🏆 TU AS GAGNÉ ! FERME LÉGENDAIRE !")
-                break
-
-
-# ---------- LANCEMENT ----------
-game = FarmGame()
-game.jouer()
+</body>
+</html>
