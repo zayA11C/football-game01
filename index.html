@@ -2,18 +2,19 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Score Boost Game ⚪🔥</title>
+<title>Ultra Circle Game ⚪💨</title>
 
 <style>
 body{
 margin:0;
 overflow:hidden;
 font-family:Arial;
+background:black;
 }
 
 canvas{display:block;}
 
-/* 🎮 UI SCORE */
+/* UI */
 #ui{
 position:absolute;
 top:10px;
@@ -27,8 +28,8 @@ padding:10px 15px;
 font-size:18px;
 border:none;
 cursor:pointer;
-background:#ffcc00;
-color:black;
+background:#9b5de5;
+color:white;
 border-radius:8px;
 }
 
@@ -44,11 +45,10 @@ border-radius:8px;
 <body>
 
 <div id="ui">
-<button onclick="toggleScore()">SCORE</button>
-
+<button onclick="toggle()">SCORE</button>
 <div id="panel" style="display:none;">
-Score: <span id="scoreText">0</span><br>
-Boost: <span id="boostText">1</span>
+Score: <span id="score">0</span><br>
+Boost: <span id="boost">1</span>
 </div>
 </div>
 
@@ -65,14 +65,11 @@ c.height=window.innerHeight;
 resize();
 window.addEventListener("resize",resize);
 
-// 🌈 fond
-let hue=0;
-
-// ⚪ balle
+// 🎮 player (balle verte)
 let ball={
 x:200,
 y:200,
-r:10,
+r:12,
 speed:5
 };
 
@@ -83,9 +80,9 @@ document.addEventListener("keyup",e=>keys[e.code]=false);
 
 // 🔵 cercles
 let rings=[];
-for(let i=0;i<12;i++) spawnRing();
+for(let i=0;i<12;i++) spawn();
 
-function spawnRing(){
+function spawn(){
 rings.push({
 x:Math.random()*c.width,
 y:Math.random()*c.height,
@@ -94,29 +91,29 @@ color:"white"
 });
 }
 
-// 💰 score + boost
+// 💨 fumée violette
+let smoke=[];
+
+// 💰 score
 let score=0;
 let boost=1;
 
-// 🔥 panel
-let showScore=false;
-
-function toggleScore(){
-showScore=!showScore;
-document.getElementById("panel").style.display=showScore?"block":"none";
+// UI
+let show=false;
+function toggle(){
+show=!show;
+document.getElementById("panel").style.display=show?"block":"none";
 }
 
 // 🌈 couleur
-function randomColor(){
+function randColor(){
 return `hsl(${Math.random()*360},100%,60%)`;
 }
 
 // 🎮 update
 function update(){
 
-hue+=1;
-
-// move
+// move player
 if(keys["ArrowUp"]) ball.y-=ball.speed;
 if(keys["ArrowDown"]) ball.y+=ball.speed;
 if(keys["ArrowLeft"]) ball.x-=ball.speed;
@@ -126,7 +123,26 @@ if(keys["ArrowRight"]) ball.x+=ball.speed;
 ball.x=Math.max(0,Math.min(c.width,ball.x));
 ball.y=Math.max(0,Math.min(c.height,ball.y));
 
-// rings
+// 💨 SMOKE TRAIL
+smoke.push({
+x:ball.x,
+y:ball.y,
+size:10,
+alpha:0.5
+});
+
+// smoke update
+for(let i=smoke.length-1;i>=0;i--){
+let s=smoke[i];
+s.size+=0.6;
+s.alpha-=0.02;
+
+if(s.alpha<=0){
+smoke.splice(i,1);
+}
+}
+
+// 🔵 rings
 for(let i=rings.length-1;i>=0;i--){
 let r=rings[i];
 
@@ -134,21 +150,21 @@ let d=Math.hypot(ball.x-r.x,ball.y-r.y);
 
 if(d<r.r){
 
-// 🎯 BOOST + SCORE
-r.color=randomColor();
+// HIT
+r.color=randColor();
 
 score += 0.5 * boost;
 boost += 0.05;
 
 // remove + respawn
 rings.splice(i,1);
-spawnRing();
+spawn();
 }
 }
 
 // UI update
-document.getElementById("scoreText").innerText=score.toFixed(1);
-document.getElementById("boostText").innerText=boost.toFixed(2);
+document.getElementById("score").innerText=score.toFixed(1);
+document.getElementById("boost").innerText=boost.toFixed(2);
 
 draw();
 requestAnimationFrame(update);
@@ -157,8 +173,17 @@ requestAnimationFrame(update);
 // 🎨 draw
 function draw(){
 
-ctx.fillStyle=`hsl(${hue},60%,10%)`;
+// background
+ctx.fillStyle="black";
 ctx.fillRect(0,0,c.width,c.height);
+
+// 💨 smoke violet
+smoke.forEach(s=>{
+ctx.fillStyle=`rgba(150,0,255,${s.alpha})`;
+ctx.beginPath();
+ctx.arc(s.x,s.y,s.size,0,Math.PI*2);
+ctx.fill();
+});
 
 // rings
 rings.forEach(r=>{
@@ -170,16 +195,16 @@ ctx.arc(r.x,r.y,r.r,0,Math.PI*2);
 ctx.stroke();
 });
 
-// ball
-ctx.fillStyle="white";
+// ball (verte)
+ctx.fillStyle="#00ff88";
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
 ctx.fill();
 
-// info
+// text
 ctx.fillStyle="white";
-ctx.font="18px Arial";
-ctx.fillText("Touch circles = +0.5 boost ⚡",20,120);
+ctx.font="20px Arial";
+ctx.fillText("Touch circles = score + boost ⚡",20,30);
 }
 
 update();
