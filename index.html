@@ -2,54 +2,94 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Ultra Circle Game ⚪💨</title>
+<title>ULTRA GEOMETRY RINGS ⚡</title>
 
 <style>
 body{
 margin:0;
 overflow:hidden;
 font-family:Arial;
-background:black;
+background:#000;
 }
 
+/* CANVAS */
 canvas{display:block;}
 
-/* UI */
-#ui{
+/* MENU */
+#menu{
 position:absolute;
-top:10px;
-left:10px;
+top:0;left:0;
+width:100%;
+height:100%;
+background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
 color:white;
 z-index:10;
 }
 
 button{
-padding:10px 15px;
+padding:12px 20px;
+margin:8px;
 font-size:18px;
 border:none;
+border-radius:10px;
 cursor:pointer;
-background:#9b5de5;
+background:#7b2cbf;
 color:white;
-border-radius:8px;
 }
 
-#panel{
-margin-top:10px;
-background:rgba(0,0,0,0.5);
-padding:10px;
-border-radius:8px;
+input[type="checkbox"]{
+transform:scale(1.3);
+}
+
+label{
+font-size:16px;
+margin:5px;
+}
+
+/* HUD */
+#hud{
+position:absolute;
+top:10px;
+left:10px;
+color:white;
+z-index:5;
+display:none;
 }
 </style>
 </head>
 
 <body>
 
-<div id="ui">
-<button onclick="toggle()">SCORE</button>
-<div id="panel" style="display:none;">
-Score: <span id="score">0</span><br>
-Boost: <span id="boost">1</span>
+<!-- MENU -->
+<div id="menu">
+
+<h1>⚡ ULTRA RINGS GAME</h1>
+
+<button onclick="startGame()">▶ START</button>
+
+<h3>OPTIONS</h3>
+
+<label><input type="checkbox" id="sound"> 🔊 Sons</label>
+<label><input type="checkbox" id="explosion"> 💥 Explosion</label>
+<label><input type="checkbox" id="magnet"> 🧲 Aimant</label>
+<label><input type="checkbox" id="hardcore"> 🔴 Hardcore</label>
+
+<br>
+
+<button onclick="resetScore()">🏆 Reset Leaderboard</button>
+
+<h3>Best Score: <span id="best">0</span></h3>
+
 </div>
+
+<!-- HUD -->
+<div id="hud">
+Score: <span id="score">0</span> |
+Speed: <span id="speed">1</span>
 </div>
 
 <canvas id="game"></canvas>
@@ -65,149 +105,206 @@ c.height=window.innerHeight;
 resize();
 window.addEventListener("resize",resize);
 
-// 🎮 player (balle verte)
-let ball={
-x:200,
-y:200,
-r:12,
-speed:5
+// 🎮 STATE
+let running=false;
+
+// ⚪ player
+let ball={x:200,y:200,r:10,speed:5};
+
+// 🔵 rings
+let rings=[];
+let particles=[];
+
+// 💰 stats
+let score=0;
+let speed=1;
+
+// options
+let opt={
+sound:false,
+explosion:false,
+magnet:false,
+hardcore:false
 };
 
-// 🎮 input
-let keys={};
-document.addEventListener("keydown",e=>keys[e.code]=true);
-document.addEventListener("keyup",e=>keys[e.code]=false);
+// 🏆 leaderboard
+let best=localStorage.getItem("best")||0;
+document.getElementById("best").innerText=best;
 
-// 🔵 cercles
-let rings=[];
-for(let i=0;i<12;i++) spawn();
+// ---------------- MENU ----------------
+function startGame(){
+opt.sound=document.getElementById("sound").checked;
+opt.explosion=document.getElementById("explosion").checked;
+opt.magnet=document.getElementById("magnet").checked;
+opt.hardcore=document.getElementById("hardcore").checked;
 
-function spawn(){
+document.getElementById("menu").style.display="none";
+document.getElementById("hud").style.display="block";
+
+running=true;
+init();
+loop();
+}
+
+// reset leaderboard
+function resetScore(){
+localStorage.setItem("best",0);
+document.getElementById("best").innerText=0;
+}
+
+// ---------------- INIT ----------------
+function init(){
+rings=[];
+for(let i=0;i<15;i++) spawnRing();
+score=0;
+speed=1;
+}
+
+// ---------------- RINGS ----------------
+function spawnRing(){
 rings.push({
 x:Math.random()*c.width,
 y:Math.random()*c.height,
-r:40+Math.random()*25,
+r:40+Math.random()*20,
+vx:(Math.random()-0.5)*opt.hardcore*2,
+vy:(Math.random()-0.5)*opt.hardcore*2,
 color:"white"
 });
 }
 
-// 💨 fumée violette
-let smoke=[];
-
-// 💰 score
-let score=0;
-let boost=1;
-
-// UI
-let show=false;
-function toggle(){
-show=!show;
-document.getElementById("panel").style.display=show?"block":"none";
+// ---------------- SOUND ----------------
+function beep(){
+if(!opt.sound) return;
+let ctxAudio=new (window.AudioContext||window.webkitAudioContext)();
+let o=ctxAudio.createOscillator();
+o.type="sine";
+o.frequency.value=600;
+o.connect(ctxAudio.destination);
+o.start();
+o.stop(ctxAudio.currentTime+0.05);
 }
 
-// 🌈 couleur
-function randColor(){
-return `hsl(${Math.random()*360},100%,60%)`;
+// ---------------- EXPLOSION ----------------
+function explode(x,y,color){
+if(!opt.explosion) return;
+
+for(let i=0;i<12;i++){
+particles.push({
+x,y,
+vx:(Math.random()-0.5)*6,
+vy:(Math.random()-0.5)*6,
+life:40,
+color
+});
+}
 }
 
-// 🎮 update
+// ---------------- LOOP ----------------
+function loop(){
+if(!running) return;
+
+update();
+draw();
+requestAnimationFrame(loop);
+}
+
+// ---------------- UPDATE ----------------
 function update(){
 
-// move player
-if(keys["ArrowUp"]) ball.y-=ball.speed;
-if(keys["ArrowDown"]) ball.y+=ball.speed;
-if(keys["ArrowLeft"]) ball.x-=ball.speed;
-if(keys["ArrowRight"]) ball.x+=ball.speed;
+// move
+document.onkeydown=e=>{
+if(e.code==="ArrowUp") ball.y-=ball.speed*speed;
+if(e.code==="ArrowDown") ball.y+=ball.speed*speed;
+if(e.code==="ArrowLeft") ball.x-=ball.speed*speed;
+if(e.code==="ArrowRight") ball.x+=ball.speed*speed;
+};
 
-// limits
-ball.x=Math.max(0,Math.min(c.width,ball.x));
-ball.y=Math.max(0,Math.min(c.height,ball.y));
-
-// 💨 SMOKE TRAIL
-smoke.push({
-x:ball.x,
-y:ball.y,
-size:10,
-alpha:0.5
+// magnet
+if(opt.magnet){
+rings.forEach(r=>{
+let dx=ball.x-r.x;
+let dy=ball.y-r.y;
+r.x+=dx*0.02;
+r.y+=dy*0.02;
 });
-
-// smoke update
-for(let i=smoke.length-1;i>=0;i--){
-let s=smoke[i];
-s.size+=0.6;
-s.alpha-=0.02;
-
-if(s.alpha<=0){
-smoke.splice(i,1);
-}
 }
 
-// 🔵 rings
+// hardcore movement
+if(opt.hardcore){
+rings.forEach(r=>{
+r.x+=r.vx;
+r.y+=r.vy;
+});
+}
+
+// collision
 for(let i=rings.length-1;i>=0;i--){
 let r=rings[i];
-
 let d=Math.hypot(ball.x-r.x,ball.y-r.y);
 
 if(d<r.r){
+score+=1;
+speed+=0.05;
 
-// HIT
-r.color=randColor();
+beep();
+explode(ball.x,ball.y,r.color);
 
-score += 0.5 * boost;
-boost += 0.05;
-
-// remove + respawn
 rings.splice(i,1);
-spawn();
+spawnRing();
 }
 }
 
-// UI update
-document.getElementById("score").innerText=score.toFixed(1);
-document.getElementById("boost").innerText=boost.toFixed(2);
-
-draw();
-requestAnimationFrame(update);
+// particles
+for(let i=particles.length-1;i>=0;i--){
+let p=particles[i];
+p.x+=p.vx;
+p.y+=p.vy;
+p.life--;
+if(p.life<=0) particles.splice(i,1);
 }
 
-// 🎨 draw
+// save best
+if(score>best){
+best=score;
+localStorage.setItem("best",best);
+document.getElementById("best").innerText=best;
+}
+
+// UI
+document.getElementById("score").innerText=score;
+document.getElementById("speed").innerText=speed.toFixed(2);
+}
+
+// ---------------- DRAW ----------------
 function draw(){
 
-// background
 ctx.fillStyle="black";
 ctx.fillRect(0,0,c.width,c.height);
-
-// 💨 smoke violet
-smoke.forEach(s=>{
-ctx.fillStyle=`rgba(150,0,255,${s.alpha})`;
-ctx.beginPath();
-ctx.arc(s.x,s.y,s.size,0,Math.PI*2);
-ctx.fill();
-});
 
 // rings
 rings.forEach(r=>{
 ctx.strokeStyle=r.color;
-ctx.lineWidth=5;
+ctx.lineWidth=4;
 
 ctx.beginPath();
 ctx.arc(r.x,r.y,r.r,0,Math.PI*2);
 ctx.stroke();
 });
 
-// ball (verte)
+// particles
+particles.forEach(p=>{
+ctx.fillStyle=p.color;
+ctx.globalAlpha=p.life/40;
+ctx.fillRect(p.x,p.y,4,4);
+ctx.globalAlpha=1;
+});
+
+// player
 ctx.fillStyle="#00ff88";
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
 ctx.fill();
-
-// text
-ctx.fillStyle="white";
-ctx.font="20px Arial";
-ctx.fillText("Touch circles = score + boost ⚡",20,30);
 }
-
-update();
 </script>
 
 </body>
