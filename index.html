@@ -5,16 +5,8 @@
 <title>Football PRO ⚽</title>
 
 <style>
-body{
-margin:0;
-overflow:hidden;
-background:#0b3d1c;
-font-family:Arial;
-}
-
-canvas{
-display:block;
-}
+body{margin:0;overflow:hidden;background:#0b3d1c;font-family:Arial;}
+canvas{display:block;}
 </style>
 </head>
 
@@ -51,7 +43,7 @@ let selected=0;
 
 // ================= BALL =================
 let ball={
-x:200,
+x:300,
 y:200,
 vx:0,
 vy:0
@@ -67,6 +59,7 @@ let scoreB=0;
 let keys={};
 
 document.addEventListener("keydown",e=>{
+
 keys[e.code]=true;
 
 // switch player
@@ -74,11 +67,10 @@ if(e.code==="KeyQ"){
 selected=(selected+1)%teamA.length;
 }
 
-// SHOOT ⚽
+// SHOOT
 if(e.code==="Space" && owner==="A"){
 let p=teamA[selected];
 
-// tir direction droite
 ball.x=p.x;
 ball.y=p.y;
 
@@ -93,6 +85,25 @@ document.addEventListener("keyup",e=>{
 keys[e.code]=false;
 });
 
+// ================= COLLISION (RÉCUP BALL) =================
+function checkBallTake(){
+
+// TEAM A
+teamA.forEach(p=>{
+if(Math.hypot(p.x-ball.x,p.y-ball.y)<15){
+owner="A";
+selected=teamA.indexOf(p);
+}
+});
+
+// TEAM B
+teamB.forEach(p=>{
+if(Math.hypot(p.x-ball.x,p.y-ball.y)<15){
+owner="B";
+}
+});
+}
+
 // ================= UPDATE =================
 function update(){
 
@@ -104,12 +115,13 @@ if(keys["ArrowDown"]) p.y+=5;
 if(keys["ArrowLeft"]) p.x-=5;
 if(keys["ArrowRight"]) p.x+=5;
 
-// BALL PHYSICS
+// BALL FOLLOW PLAYER
 if(owner==="A"){
-ball.x += (p.x-ball.x)*0.2;
-ball.y += (p.y-ball.y)*0.2;
+ball.x += (p.x-ball.x)*0.25;
+ball.y += (p.y-ball.y)*0.25;
 }
 
+// BALL PHYSICS
 if(owner==="free"){
 ball.x+=ball.vx;
 ball.y+=ball.vy;
@@ -118,27 +130,25 @@ ball.vx*=0.98;
 ball.vy*=0.98;
 }
 
-// TEAM B AI
+// TEAM B IA
 teamB.forEach(e=>{
 let dx=ball.x-e.x;
 let dy=ball.y-e.y;
 
 e.x+=dx*0.02;
 e.y+=dy*0.02;
-
-// steal ball
-if(Math.hypot(e.x-ball.x,e.y-ball.y)<15){
-owner="B";
-}
 });
 
-// TEAM B SHOOT LEFT
+// TEAM B POSSESSION
 if(owner==="B"){
-ball.x+=(100-ball.x)*0.05;
-ball.y+=(c.height/2-ball.y)*0.05;
+ball.x+=(teamB[0].x-ball.x)*0.05;
+ball.y+=(teamB[0].y-ball.y)*0.05;
 }
 
-// GOAL RIGHT (TEAM A SCORE)
+// 🔥 BALL RECOVERY
+checkBallTake();
+
+// GOAL RIGHT
 if(ball.x>c.width-30 &&
 ball.y>c.height/2-100 &&
 ball.y<c.height/2+100){
@@ -146,7 +156,7 @@ scoreA++;
 reset();
 }
 
-// GOAL LEFT (TEAM B SCORE)
+// GOAL LEFT
 if(ball.x<30 &&
 ball.y>c.height/2-100 &&
 ball.y<c.height/2+100){
@@ -184,18 +194,18 @@ owner="A";
 // ================= FIELD =================
 function field(){
 
-// grass
 ctx.fillStyle="#1f7a2e";
 ctx.fillRect(0,0,c.width,c.height);
 
-// center line
 ctx.strokeStyle="white";
+
+// center line
 ctx.beginPath();
 ctx.moveTo(c.width/2,0);
 ctx.lineTo(c.width/2,c.height);
 ctx.stroke();
 
-// center circle
+// circle
 ctx.beginPath();
 ctx.arc(c.width/2,c.height/2,80,0,Math.PI*2);
 ctx.stroke();
@@ -205,7 +215,7 @@ ctx.strokeRect(20,c.height/2-100,20,200);
 ctx.strokeRect(c.width-40,c.height/2-100,20,200);
 }
 
-// ================= PLAYER =================
+// ================= DRAW PLAYER =================
 function drawPlayer(x,y,color){
 
 ctx.fillStyle="#ffcc80";
@@ -215,19 +225,6 @@ ctx.fill();
 
 ctx.fillStyle=color;
 ctx.fillRect(x-6,y+8,12,20);
-}
-
-// ================= UI =================
-function ui(){
-
-ctx.fillStyle="white";
-ctx.font="24px Arial";
-
-ctx.fillText("TEAM A: "+scoreA,20,40);
-ctx.fillText("TEAM B: "+scoreB,20,70);
-
-ctx.font="16px Arial";
-ctx.fillText("Arrow = move | Q = switch player | SPACE = shoot",20,100);
 }
 
 // ================= DRAW =================
@@ -251,7 +248,12 @@ ctx.beginPath();
 ctx.arc(ball.x,ball.y,6,0,Math.PI*2);
 ctx.fill();
 
-ui();
+// UI
+ctx.fillStyle="white";
+ctx.font="24px Arial";
+ctx.fillText("TEAM A: "+scoreA,20,40);
+ctx.fillText("TEAM B: "+scoreB,20,70);
+ctx.fillText("Q = changer joueur | SPACE = tir | touche balle = récupération",20,100);
 }
 
 update();
