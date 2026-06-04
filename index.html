@@ -3,14 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Farm RPG</title>
+<title>Farm World RPG</title>
 
 <style>
 body {
     margin: 0;
-    background: #111;
     overflow: hidden;
-    color: white;
+    background: black;
     font-family: Arial;
 }
 
@@ -19,12 +18,9 @@ body {
     top: 10px;
     left: 10px;
     background: rgba(0,0,0,0.6);
+    color: white;
     padding: 10px;
     border-radius: 8px;
-}
-
-canvas {
-    display: block;
 }
 </style>
 </head>
@@ -32,114 +28,218 @@ canvas {
 <body>
 
 <div id="ui">
-    <b>🌾 FARM RPG</b><br>
-    💰 Or: <span id="money">0</span><br>
-    🌾 Blé: <span id="wheat">0</span><br>
-    👇 WASD pour bouger<br>
-    E = interagir
+💰 Or: <span id="money">0</span><br>
+🌾 Blé: <span id="wheat">0</span><br>
+🎒 Inventaire: <span id="inv">0 graines</span><br>
+🧭 Quête: parle au fermier
 </div>
 
-<canvas id="game"></canvas>
+<canvas id="c"></canvas>
 
 <script>
 
 // ---------------- CANVAS ----------------
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const c = document.getElementById("c");
+const ctx = c.getContext("2d");
+c.width = window.innerWidth;
+c.height = window.innerHeight;
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+// ---------------- WORLD ----------------
+const tileSize = 40;
+const worldW = 30;
+const worldH = 30;
+
+// 0 = sol, 1 = mur, 2 = champ
+let map = [];
+
+for (let y = 0; y < worldH; y++) {
+    let row = [];
+    for (let x = 0; x < worldW; x++) {
+        if (x === 0 || y === 0 || x === worldW-1 || y === worldH-1) row.push(1);
+        else if (Math.random() < 0.1) row.push(1);
+        else row.push(0);
+    }
+    map.push(row);
+}
+
+// champ initial
+map[10][10] = 2;
 
 // ---------------- PLAYER ----------------
-let player = {
-    x: 100,
-    y: 100,
-    size: 20,
+let p = {
+    x: 5,
+    y: 5,
+    px: 0,
+    py: 0,
     speed: 3
 };
 
-// ---------------- GAME STATE ----------------
+// ---------------- NPC ----------------
+let npc = { x: 12, y: 12, text: "Salut ! Appuie sur E" };
+
+// ---------------- ENEMY ----------------
+let enemy = { x: 20, y: 20, hp: 3 };
+
+// ---------------- GAME ----------------
 let game = {
     money: 10,
-    wheat: 0
+    wheat: 0,
+    seeds: 3
 };
 
-// ---------------- NPC ----------------
-let npc = {
-    x: 300,
-    y: 200,
-    size: 20,
-    text: "Salut fermier ! Appuie sur E"
-};
-
-// ---------------- KEYS ----------------
+// ---------------- INPUT ----------------
 let keys = {};
-
 document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
 document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-// ---------------- MOVE ----------------
-function move() {
-    if (keys["w"]) player.y -= player.speed;
-    if (keys["s"]) player.y += player.speed;
-    if (keys["a"]) player.x -= player.speed;
-    if (keys["d"]) player.x += player.speed;
+// ---------------- COLLISION ----------------
+function solid(x,y){
+    return map[y] && map[y][x] === 1;
 }
 
-// ---------------- INTERACTION ----------------
-function interact() {
-    let dx = player.x - npc.x;
-    let dy = player.y - npc.y;
-    let dist = Math.sqrt(dx*dx + dy*dy);
+// ---------------- MOVE ----------------
+function move(){
+    let nx = p.x;
+    let ny = p.y;
 
-    if (dist < 50) {
-        game.money += 5;
-        game.wheat += 2;
-        npc.text = "Merci ! +5💰 +2🌾";
-        setTimeout(() => {
-            npc.text = "Salut fermier ! Appuie sur E";
-        }, 2000);
+    if (keys["w"]) ny -= 0.1;
+    if (keys["s"]) ny += 0.1;
+    if (keys["a"]) nx -= 0.1;
+    if (keys["d"]) nx += 0.1;
+
+    if (!solid(Math.floor(nx), Math.floor(p.y))) p.x = nx;
+    if (!solid(Math.floor(p.x), Math.floor(ny))) p.y = ny;
+}
+
+// ---------------- FARM ----------------
+function farm(){
+    let tx = Math.floor(p.x);
+    let ty = Math.floor(p.y);
+
+    if (map[ty][tx] === 2) {
+        game.wheat += 1;
+        map[ty][tx] = 0;
+        beep();
+    } else if (game.seeds > 0) {
+        map[ty][tx] = 2;
+        game.seeds--;
     }
 }
 
+// ---------------- INTERACT ----------------
+function interact(){
+    let dx = Math.abs(p.x - npc.x);
+    let dy = Math.abs(p.y - npc.y);
+
+    if (dx + dy < 2) {
+        game.money += 5;
+        game.seeds += 2;
+        npc.text = "Merci fermier ! +5💰 +2 graines";
+        setTimeout(()=> npc.text = "Salut ! Appuie sur E", 2000);
+    }
+}
+
+// ---------------- COMBAT ----------------
+function fight(){
+    let dx = Math.abs(p.x - enemy.x);
+    let dy = Math.abs(p.y - enemy.y);
+
+    if (dx + dy < 2) {
+        enemy.hp--;
+        beep();
+        if (enemy.hp <= 0) {
+            game.money += 20;
+            enemy.x = -10;
+        }
+    }
+}
+
+// ---------------- SOUND ----------------
+function beep(){
+    let ctxA = new AudioContext();
+    let o = ctxA.createOscillator();
+    o.frequency.value = 200;
+    o.connect(ctxA.destination);
+    o.start();
+    o.stop(ctxA.currentTime + 0.1);
+}
+
+// ---------------- ACTION ----------------
 document.addEventListener("keydown", e => {
     if (e.key.toLowerCase() === "e") interact();
+    if (e.key.toLowerCase() === "f") farm();
+    if (e.key.toLowerCase() === " ") fight();
 });
 
 // ---------------- DRAW ----------------
-function draw() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+function draw(){
 
-    // ground
-    ctx.fillStyle = "#2ecc71";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.clearRect(0,0,c.width,c.height);
 
-    // npc
+    let camX = p.x * tileSize - c.width/2;
+    let camY = p.y * tileSize - c.height/2;
+
+    for (let y = 0; y < worldH; y++) {
+        for (let x = 0; x < worldW; x++) {
+
+            let t = map[y][x];
+
+            if (t === 0) ctx.fillStyle = "#2ecc71";
+            if (t === 1) ctx.fillStyle = "#7f8c8d";
+            if (t === 2) ctx.fillStyle = "#f1c40f";
+
+            ctx.fillRect(
+                x*tileSize - camX,
+                y*tileSize - camY,
+                tileSize,
+                tileSize
+            );
+        }
+    }
+
+    // NPC
     ctx.fillStyle = "blue";
-    ctx.fillRect(npc.x, npc.y, npc.size, npc.size);
+    ctx.fillRect(npc.x*tileSize-camX, npc.y*tileSize-camY, 20,20);
 
     ctx.fillStyle = "white";
-    ctx.fillText(npc.text, npc.x - 40, npc.y - 10);
+    ctx.fillText(npc.text, npc.x*tileSize-camX, npc.y*tileSize-camY-10);
 
-    // player
+    // Enemy
     ctx.fillStyle = "red";
-    ctx.fillRect(player.x, player.y, player.size, player.size);
+    ctx.fillRect(enemy.x*tileSize-camX, enemy.y*tileSize-camY, 20,20);
+
+    // Player
+    ctx.fillStyle = "white";
+    ctx.fillRect(p.x*tileSize-camX, p.y*tileSize-camY, 20,20);
 }
 
 // ---------------- UI ----------------
-function updateUI() {
+function ui(){
     document.getElementById("money").innerText = game.money;
     document.getElementById("wheat").innerText = game.wheat;
+    document.getElementById("inv").innerText = game.seeds;
+}
+
+// ---------------- SAVE ----------------
+function save(){
+    localStorage.setItem("farmworld", JSON.stringify(game));
+}
+
+function load(){
+    let d = localStorage.getItem("farmworld");
+    if (d) game = JSON.parse(d);
 }
 
 // ---------------- LOOP ----------------
-function loop() {
+function loop(){
     move();
     draw();
-    updateUI();
+    ui();
+    save();
     requestAnimationFrame(loop);
 }
 
+load();
 loop();
 
 </script>
