@@ -1,265 +1,119 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<title>CYBER STEAM PONG</title>
+import random
 
-<style>
-body{margin:0;overflow:hidden;background:#000;font-family:Arial}
+class FarmGame:
+    def __init__(self):
+        self.or_ = 10
+        self.ble = 0
+        self.energie = 3
+        self.champs = 1
+        self.poules = 0
+        self.niveau = 1
+        self.jour = 1
 
-/* ===== STEAM MENU ===== */
-#menu{
-position:absolute;inset:0;
-display:flex;flex-direction:column;
-justify-content:center;align-items:center;
-background:linear-gradient(45deg,#0a0a0a,#111,#220033,#00ffff,#ff00ff);
-background-size:400% 400%;
-animation:bg 6s infinite alternate;
-color:white;
-z-index:10;
-}
+    # ---------- UTIL ----------
+    def status(self):
+        print("\n--- STATUS ---")
+        print(f"Jour: {self.jour}")
+        print(f"Or: {self.or_}")
+        print(f"Blé: {self.ble}")
+        print(f"Énergie: {self.energie}")
+        print(f"Champs: {self.champs}")
+        print(f"Poules: {self.poules}")
+        print("----------------\n")
 
-@keyframes bg{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+    def event(self):
+        events = [
+            ("🌧️ Pluie abondante", 1.5),
+            ("🐀 Rats affamés", 0.9),
+            ("🧑‍🌾 Marchand généreux", 1.2),
+            ("⚡ Tempête", 0.8),
+            ("☀️ Journée normale", 1.0),
+        ]
+        ev = random.choice(events)
+        print(f"ÉVÉNEMENT : {ev[0]}")
+        return ev[1]
 
-button{padding:10px;border:none;border-radius:8px;margin:5px}
+    # ---------- ACTIONS ----------
+    def planter(self):
+        gain = self.champs * 2
+        self.ble += gain
+        print(f"🌱 Tu plantes et gagnes {gain} blé.")
 
-/* HUD */
-#hud{position:absolute;top:10px;left:10px;color:white;display:none}
+    def recolter(self, bonus):
+        gain = int(self.champs * 2 * bonus)
+        self.ble += gain
+        print(f"🌾 Tu récoltes {gain} blé.")
 
-/* MATCHMAKING */
-#match{
-position:absolute;inset:0;
-display:none;
-justify-content:center;align-items:center;
-flex-direction:column;
-background:rgba(0,0,0,0.8);
-color:white;
-z-index:20;
-}
+    def vendre(self):
+        gain = self.ble // 2
+        self.or_ += gain
+        print(f"🏪 Tu vends pour {gain} or.")
+        self.ble = 0
 
-/* canvas */
-canvas{display:block}
-</style>
-</head>
+    def elever(self):
+        self.poules += 1
+        print("🐔 Tu ajoutes une poule (+production future).")
 
-<body>
+    def ameliorer(self):
+        if self.or_ >= 20:
+            self.or_ -= 20
+            self.champs += 1
+            print("🔧 Amélioration: +1 champ")
+        else:
+            print("❌ Pas assez d'or (20 requis)")
 
-<div id="menu">
-<h1>🎮 CYBER STEAM PONG</h1>
+    def repos(self):
+        self.energie = 3
+        print("😴 Tu te reposes et récupères ton énergie.")
 
-<div id="profile">
-LVL: <span id="lvl">1</span> |
-MMR: <span id="mmr">1000</span>
-</div>
+    # ---------- TOUR ----------
+    def jouer_tour(self):
+        print(f"\n===== JOUR {self.jour} =====")
 
-<button onclick="queue()">PLAY MATCHMAKING</button>
-</div>
+        bonus = self.event()
 
-<div id="match">
-<h2>🌐 Searching match...</h2>
-<p id="ping"></p>
-</div>
+        actions = 3
+        self.energie = 3
 
-<div id="hud">
-Score: <span id="l">0</span> - <span id="r">0</span>
-</div>
+        while actions > 0:
+            self.status()
+            print("Actions possibles: planter / recolter / vendre / elever / ameliorer / repos")
+            choix = input("Choisis une action: ").lower()
 
-<canvas id="c"></canvas>
+            if choix == "planter":
+                self.planter()
+            elif choix == "recolter":
+                self.recolter(bonus)
+            elif choix == "vendre":
+                self.vendre()
+            elif choix == "elever":
+                self.elever()
+            elif choix == "ameliorer":
+                self.ameliorer()
+            elif choix == "repos":
+                self.repos()
+                break
+            else:
+                print("Action inconnue.")
+                continue
 
-<script>
-// ===== CANVAS =====
-const c=document.getElementById("c");
-const ctx=c.getContext("2d");
-c.width=innerWidth;c.height=innerHeight;
+            actions -= 1
 
-// ===== PLAYER PROFILE =====
-let lvl=1;
-let xp=0;
-let mmr=1000;
+        # production poules
+        self.ble += self.poules * 2
+        print(f"🐔 Tes poules produisent {self.poules * 2} blé.")
 
-// ===== GAME =====
-let left,right,ball;
-let running=false;
-let mode="ai";
+        self.jour += 1
 
-// ===== IA (NEURAL SIMPLE PERCEPTRON) =====
-class Brain{
-constructor(){
-this.w1=Math.random()*2-1;
-this.w2=Math.random()*2-1;
-}
-predict(x,y){
-return x*this.w1+y*this.w2;
-}
-train(err,x,y){
-this.w1+=err*x*0.0001;
-this.w2+=err*y*0.0001;
-}
-}
-let aiBrain=new Brain();
+    def jouer(self):
+        while self.or_ < 10000:
+            self.jouer_tour()
 
-// ===== INIT =====
-function init(){
-left={x:20,y:c.height/2-70,w:15,h:140,s:8};
-right={x:c.width-35,y:c.height/2-70,w:15,h:140,s:8};
-ball={x:c.width/2,y:c.height/2,vx:7,vy:3,r:8};
-}
+            if self.or_ >= 10000:
+                print("\n🏆 TU AS GAGNÉ ! FERME LÉGENDAIRE !")
+                break
 
-// ===== MATCHMAKING (SIMULATED GLOBAL) =====
-function queue(){
-document.getElementById("match").style.display="flex";
 
-let ping=Math.floor(Math.random()*80+20);
-document.getElementById("ping").innerText="Ping: "+ping+"ms | Region: EU";
-
-setTimeout(()=>{
-document.getElementById("match").style.display="none";
-start();
-},1500);
-}
-
-// ===== START =====
-function start(){
-document.getElementById("menu").style.display="none";
-document.getElementById("hud").style.display="block";
-init();
-running=true;
-loop();
-}
-
-// ===== AI =====
-function ai(){
-let inputX=ball.x/c.width;
-let inputY=ball.y/c.height;
-
-let output=aiBrain.predict(inputX,inputY);
-
-// target
-let target=output*c.height;
-
-// move
-right.y+=(target-right.h/2-right.y)*0.2;
-
-// train (learning player style)
-let err=(ball.y-right.y);
-aiBrain.train(err,inputX,inputY);
-}
-
-// ===== UPDATE =====
-function update(){
-
-// player
-if(keys["KeyW"]) left.y-=8;
-if(keys["KeyS"]) left.y+=8;
-
-// clamp
-left.y=Math.max(0,Math.min(c.height-left.h,left.y));
-right.y=Math.max(0,Math.min(c.height-right.h,right.y));
-
-// IA
-ai();
-
-// ball
-ball.x+=ball.vx;
-ball.y+=ball.vy;
-
-// bounce
-if(ball.y<0||ball.y>c.height) ball.vy*=-1;
-
-// collision
-if(ball.x<left.x+left.w && ball.y>left.y && ball.y<left.y+left.h){
-ball.vx*=-1;
-}
-if(ball.x>right.x && ball.y>right.y && ball.y<right.y+right.h){
-ball.vx*=-1;
-}
-
-// score
-if(ball.x<0){scoreR();reset();}
-if(ball.x>c.width){scoreL();reset();}
-}
-
-// ===== SCORE =====
-function scoreL(){
-xp+=10;
-mmr+=5;
-lvl=Math.floor(xp/100)+1;
-updateUI();
-}
-
-function scoreR(){
-mmr-=5;
-updateUI();
-}
-
-function updateUI(){
-document.getElementById("lvl").innerText=lvl;
-document.getElementById("mmr").innerText=mmr;
-}
-
-// ===== RESET =====
-function reset(){
-ball.x=c.width/2;
-ball.y=c.height/2;
-ball.vx=(Math.random()>0.5?7:-7);
-ball.vy=(Math.random()-0.5)*6;
-}
-
-// ===== LOOP =====
-function loop(){
-if(!running)return;
-update();
-render();
-requestAnimationFrame(loop);
-}
-
-// ===== CYBER BLOOM SHADER (fake post process) =====
-let hue=0;
-
-function render(){
-hue+=2;
-
-// bloom effect
-ctx.fillStyle=`rgba(0,0,0,0.2)`;
-ctx.fillRect(0,0,c.width,c.height);
-
-// neon background
-ctx.fillStyle=`hsl(${hue},80%,10%)`;
-ctx.fillRect(0,0,c.width,c.height);
-
-// paddles
-ctx.fillStyle="white";
-ctx.fillRect(left.x,left.y,left.w,left.h);
-ctx.fillRect(right.x,right.y,right.w,right.h);
-
-// ball glow
-ctx.shadowBlur=25;
-ctx.shadowColor="cyan";
-
-ctx.beginPath();
-ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
-ctx.fill();
-
-// UI
-document.getElementById("l").innerText=0;
-document.getElementById("r").innerText=0;
-}
-
-// ===== INPUT =====
-let keys={};
-addEventListener("keydown",e=>keys[e.code]=true);
-addEventListener("keyup",e=>keys[e.code]=false);
-
-// ===== PWA (INLINE MOCK) =====
-if('serviceWorker' in navigator){
-const sw=`
-self.addEventListener('install',e=>self.skipWaiting());
-self.addEventListener('fetch',e=>{});
-`;
-const blob=new Blob([sw],{type:'text/javascript'});
-navigator.serviceWorker.register(URL.createObjectURL(blob));
-}
-</script>
-
-</body>
-</html>
+# ---------- LANCEMENT ----------
+game = FarmGame()
+game.jouer()
