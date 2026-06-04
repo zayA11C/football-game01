@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>ADDICTIVE RINGS ⚪🔥</title>
+<title>Rings Ultra FX ⚪💥</title>
 
 <style>
 body{
@@ -40,62 +40,75 @@ r:10,
 speed:5
 };
 
-// 🎮 touches
+// 🎮 input
 let keys={};
 document.addEventListener("keydown",e=>keys[e.code]=true);
 document.addEventListener("keyup",e=>keys[e.code]=false);
 
 // 🔵 cercles
 let rings=[];
-for(let i=0;i<5;i++) spawnRing();
+for(let i=0;i<15;i++) spawnRing();
 
-// 💰 score + combo
-let score=0;
-let combo=1;
-let lastHitTime=0;
-
-// 🔥 vitesse globale
-let gameSpeed=1;
-
-// 🎯 spawn cercle
 function spawnRing(){
 rings.push({
 x:Math.random()*c.width,
 y:Math.random()*c.height,
-r:50,
+r:40+Math.random()*25,
 color:"white",
-life:3000+Math.random()*2000
+life:3000
 });
 }
+
+// 💥 particules explosion
+let particles=[];
+
+// 💰 score
+let score=0;
+let combo=1;
+let lastHit=0;
 
 // 🌈 couleur
 function randomColor(){
 return `hsl(${Math.random()*360},100%,60%)`;
 }
 
+// 💥 explosion FX
+function explosion(x,y,color){
+for(let i=0;i<12;i++){
+particles.push({
+x:x,
+y:y,
+vx:(Math.random()-0.5)*6,
+vy:(Math.random()-0.5)*6,
+life:40,
+color:color
+});
+}
+}
+
 // 🎮 update
 function update(){
 
 hue+=1;
-if(hue>360) hue=0;
 
 // move
-if(keys["ArrowUp"]) ball.y-=ball.speed*gameSpeed;
-if(keys["ArrowDown"]) ball.y+=ball.speed*gameSpeed;
-if(keys["ArrowLeft"]) ball.x-=ball.speed*gameSpeed;
-if(keys["ArrowRight"]) ball.x+=ball.speed*gameSpeed;
+if(keys["ArrowUp"]) ball.y-=ball.speed;
+if(keys["ArrowDown"]) ball.y+=ball.speed;
+if(keys["ArrowLeft"]) ball.x-=ball.speed;
+if(keys["ArrowRight"]) ball.x+=ball.speed;
 
-// limites
+// limits
 ball.x=Math.max(0,Math.min(c.width,ball.x));
 ball.y=Math.max(0,Math.min(c.height,ball.y));
 
-// ⏱ combo reset
-if(Date.now()-lastHitTime>1200){
+// combo reset
+if(Date.now()-lastHit>1200){
 combo=1;
 }
 
-// 🔵 cercles
-rings.forEach((r,i)=>{
+// rings
+for(let i=rings.length-1;i>=0;i--){
+let r=rings[i];
 
 r.life-=16;
 
@@ -103,41 +116,50 @@ let d=Math.hypot(ball.x-r.x,ball.y-r.y);
 
 if(d<r.r){
 
-// HIT 🔥
+// 💥 explosion
+explosion(ball.x,ball.y,r.color);
+
+// HIT
 r.color=randomColor();
 score+=combo;
 combo++;
+lastHit=Date.now();
 
-lastHitTime=Date.now();
-
-// accélération progressive
-gameSpeed+=0.03;
-
-// nouveau cercle
+// remove + respawn
 rings.splice(i,1);
 spawnRing();
-
-// effet satisfaction (flash)
-document.body.style.background=`hsl(${hue},50%,8%)`;
 }
-
 if(r.life<=0){
 rings.splice(i,1);
 spawnRing();
 }
-});
+}
+
+// particles
+for(let i=particles.length-1;i>=0;i--){
+let p=particles[i];
+
+p.x+=p.vx;
+p.y+=p.vy;
+p.life--;
+
+if(p.life<=0){
+particles.splice(i,1);
+}
+}
 
 draw();
 requestAnimationFrame(update);
 }
 
-// 🎨 DRAW
+// 🎨 draw
 function draw(){
 
+// 🌈 background flash
 ctx.fillStyle=`hsl(${hue},60%,10%)`;
 ctx.fillRect(0,0,c.width,c.height);
 
-// cercles
+// rings
 rings.forEach(r=>{
 ctx.strokeStyle=r.color;
 ctx.lineWidth=5;
@@ -145,15 +167,19 @@ ctx.lineWidth=5;
 ctx.beginPath();
 ctx.arc(r.x,r.y,r.r,0,Math.PI*2);
 ctx.stroke();
-
-// timer visuel
-ctx.strokeStyle="rgba(255,255,255,0.2)";
-ctx.beginPath();
-ctx.arc(r.x,r.y,r.r+5,0,Math.PI*2);
-ctx.stroke();
 });
 
-// balle
+// particles 💥
+particles.forEach(p=>{
+ctx.fillStyle=p.color;
+ctx.globalAlpha=p.life/40;
+
+ctx.fillRect(p.x,p.y,4,4);
+
+ctx.globalAlpha=1;
+});
+
+// ball
 ctx.fillStyle="white";
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
@@ -168,9 +194,7 @@ ctx.font="22px Arial";
 ctx.fillText("Combo x"+combo,20,70);
 
 ctx.font="16px Arial";
-ctx.fillText("Speed: "+gameSpeed.toFixed(2),20,100);
-
-ctx.fillText("Arrow keys = move ⚪🔥",20,130);
+ctx.fillText("💥 ULTRA FX MODE",20,100);
 }
 
 update();
