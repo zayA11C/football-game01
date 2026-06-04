@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Ping Pong INVINCIBLE AI 🏓⚡</title>
+<title>Ping Pong Neon AI</title>
 
 <style>
 body{
@@ -15,23 +15,19 @@ background:black;
 /* ===== MENU ===== */
 #menu{
 position:absolute;
-top:0;left:0;
-width:100%;
-height:100%;
+inset:0;
 display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
-color:white;
 z-index:10;
-background:linear-gradient(45deg,#0f0c29,#302b63,#ff00cc,#00ffcc);
-background-size:400% 400%;
-animation:moveBg 6s infinite alternate;
+color:white;
+background:linear-gradient(45deg,#000,#111,#222);
 }
 
-@keyframes moveBg{
-0%{background-position:0% 50%;}
-100%{background-position:100% 50%;}
+#menu h1{
+font-size:40px;
+margin-bottom:20px;
 }
 
 button{
@@ -41,23 +37,35 @@ border:none;
 border-radius:10px;
 cursor:pointer;
 background:#00ffcc;
-color:black;
 margin-top:10px;
 }
 
-label{
-color:white;
-font-size:16px;
-margin:5px;
-}
-
+/* ===== HUD ===== */
 #hud{
 position:absolute;
 top:10px;
 left:10px;
 color:white;
+font-size:20px;
 z-index:5;
 display:none;
+}
+
+/* ===== SCOREBOARD FIN ===== */
+#scoreBoard{
+position:absolute;
+inset:0;
+display:none;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+color:white;
+background:rgba(0,0,0,0.85);
+z-index:20;
+}
+
+#scoreBoard h2{
+font-size:40px;
 }
 
 canvas{display:block;}
@@ -68,71 +76,46 @@ canvas{display:block;}
 
 <!-- MENU -->
 <div id="menu">
-<h1>🏓 INVINCIBLE AI PING PONG ⚡</h1>
-
-<button onclick="startGame()">START</button>
-
-<h3>OPTIONS</h3>
-
-<label><input type="checkbox" id="sound"> 🔊 Sons</label>
-<label><input type="checkbox" id="hard"> 🔥 Hard mode (speed++)</label>
-
-<p>W/S = gauche | AI droite 🤖</p>
+<h1>🏓 NEON PING PONG</h1>
+<button onclick="startGame()">JOUER</button>
 </div>
 
 <!-- HUD -->
 <div id="hud">
-Score: <span id="scoreL">0</span> - <span id="scoreR">0</span>
+Score : <span id="sL">0</span> - <span id="sR">0</span>
 </div>
 
-<canvas id="game"></canvas>
+<!-- SCOREBOARD -->
+<div id="scoreBoard">
+<h2 id="result"></h2>
+<button onclick="restart()">Rejouer</button>
+</div>
+
+<canvas id="c"></canvas>
 
 <script>
-const c=document.getElementById("game");
+const c=document.getElementById("c");
 const ctx=c.getContext("2d");
 
 function resize(){
-c.width=window.innerWidth;
-c.height=window.innerHeight;
+c.width=innerWidth;
+c.height=innerHeight;
 }
 resize();
-window.addEventListener("resize",resize);
+addEventListener("resize",resize);
 
-// ================= GAME =================
+// ===== GAME STATE =====
+let left,right,ball;
+let scoreL=0, scoreR=0;
 let running=false;
 
-let left,right,ball;
-
-let scoreL=0;
-let scoreR=0;
-
-let opt={
-sound:false,
-hard:false
-};
-
-// input
+// ===== INPUT =====
 let keys={};
-document.addEventListener("keydown",e=>keys[e.code]=true);
-document.addEventListener("keyup",e=>keys[e.code]=false);
+addEventListener("keydown",e=>keys[e.code]=true);
+addEventListener("keyup",e=>keys[e.code]=false);
 
-// 🔊 sound
-function beep(f=600){
-if(!opt.sound) return;
-let a=new (window.AudioContext||window.webkitAudioContext)();
-let o=a.createOscillator();
-o.frequency.value=f;
-o.connect(a.destination);
-o.start();
-o.stop(a.currentTime+0.05);
-}
-
-// ================= START =================
+// ===== MENU =====
 function startGame(){
-
-opt.sound=document.getElementById("sound").checked;
-opt.hard=document.getElementById("hard").checked;
-
 document.getElementById("menu").style.display="none";
 document.getElementById("hud").style.display="block";
 
@@ -141,51 +124,26 @@ running=true;
 loop();
 }
 
-// ================= INIT =================
+// ===== INIT =====
 function init(){
+left={x:20,y:c.height/2-70,w:15,h:140,s:8};
+right={x:c.width-35,y:c.height/2-70,w:15,h:140,s:7};
 
-left={
-x:20,
-y:c.height/2-70,
-w:15,
-h:140,
-speed:8
-};
-
-right={
-x:c.width-35,
-y:c.height/2-70,
-w:15,
-h:140,
-speed:9
-};
-
-ball={
-x:c.width/2,
-y:c.height/2,
-vx:7,
-vy:3,
-r:8
-};
+ball={x:c.width/2,y:c.height/2,vx:7,vy:3,r:8};
 
 scoreL=0;
 scoreR=0;
+updateHUD();
 }
 
-// ================= ULTRA IA (IMPOSSIBLE A PERDRE) =================
+// ===== IA =====
 function ai(){
-
-// suit EXACTEMENT la balle (prediction)
-let targetY = ball.y - right.h/2;
-
-// smoothing ultra précis
-right.y += (targetY - right.y) * 0.18;
-
-// limite parfaite
+let target = ball.y - right.h/2;
+right.y += (target - right.y)*0.12;
 right.y=Math.max(0,Math.min(c.height-right.h,right.y));
 }
 
-// ================= LOOP =================
+// ===== LOOP =====
 function loop(){
 if(!running) return;
 
@@ -194,78 +152,58 @@ draw();
 requestAnimationFrame(loop);
 }
 
-// ================= UPDATE =================
+// ===== UPDATE =====
 function update(){
 
-// LEFT PLAYER
-if(keys["KeyW"]) left.y-=left.speed;
-if(keys["KeyS"]) left.y+=left.speed;
-
+// PLAYER
+if(keys["KeyW"]) left.y-=left.s;
+if(keys["KeyS"]) left.y+=left.s;
 left.y=Math.max(0,Math.min(c.height-left.h,left.y));
 
-// AI RIGHT
+// IA
 ai();
 
-// ⚡ HARD MODE SPEED
-if(opt.hard){
-ball.vx*=1.002;
-ball.vy*=1.002;
-}
-
-// MOVE BALL
+// BALL
 ball.x+=ball.vx;
 ball.y+=ball.vy;
 
-// bounce top/bottom
-if(ball.y<0 || ball.y>c.height) ball.vy*=-1;
+// WALL
+if(ball.y<0||ball.y>c.height) ball.vy*=-1;
 
-// SPIN EFFECT 🎯
-function spin(p){
-let diff = ball.y - (p.y + p.h/2);
-ball.vy += diff*0.015;
-}
-
-// LEFT COLLISION
+// COLLISION LEFT
 if(ball.x-ball.r<left.x+left.w &&
-ball.y>left.y &&
-ball.y<left.y+left.h){
-
+ball.y>left.y && ball.y<left.y+left.h){
 ball.vx*=-1;
-spin(left);
 ball.x=left.x+left.w+ball.r;
-beep(500);
 }
 
-// RIGHT COLLISION (AI)
+// COLLISION RIGHT
 if(ball.x+ball.r>right.x &&
-ball.y>right.y &&
-ball.y<right.y+right.h){
-
+ball.y>right.y && ball.y<right.y+right.h){
 ball.vx*=-1;
-spin(right);
 ball.x=right.x-ball.r;
-beep(700);
 }
 
 // SCORE
 if(ball.x<0){
 scoreR++;
 reset();
-beep(200);
 }
 
 if(ball.x>c.width){
 scoreL++;
 reset();
-beep(200);
 }
 
-// HUD
-document.getElementById("scoreL").innerText=scoreL;
-document.getElementById("scoreR").innerText=scoreR;
+updateHUD();
+
+// WIN
+if(scoreL>=5 || scoreR>=5){
+endGame();
+}
 }
 
-// ================= RESET =================
+// ===== RESET BALL =====
 function reset(){
 ball.x=c.width/2;
 ball.y=c.height/2;
@@ -273,13 +211,42 @@ ball.vx=(Math.random()>0.5?7:-7);
 ball.vy=(Math.random()-0.5)*6;
 }
 
-// ================= DRAW =================
+// ===== HUD =====
+function updateHUD(){
+document.getElementById("sL").textContent=scoreL;
+document.getElementById("sR").textContent=scoreR;
+}
+
+// ===== END GAME =====
+function endGame(){
+running=false;
+
+document.getElementById("scoreBoard").style.display="flex";
+
+document.getElementById("result").textContent =
+(scoreL>scoreR) ? "🏆 TU GAGNES !" : "🤖 IA GAGNE !";
+}
+
+// ===== RESTART =====
+function restart(){
+document.getElementById("scoreBoard").style.display="none";
+init();
+running=true;
+loop();
+}
+
+// ===== DRAW (FOND ANIMÉ) =====
+let hue=0;
+
 function draw(){
 
-ctx.fillStyle="black";
+hue+=2;
+
+// fond animé couleur
+ctx.fillStyle=`hsl(${hue},80%,10%)`;
 ctx.fillRect(0,0,c.width,c.height);
 
-// center line
+// ligne centrale
 ctx.strokeStyle="white";
 ctx.setLineDash([10,10]);
 ctx.beginPath();
@@ -293,7 +260,7 @@ ctx.fillStyle="white";
 ctx.fillRect(left.x,left.y,left.w,left.h);
 ctx.fillRect(right.x,right.y,right.w,right.h);
 
-// ball glow
+// balle glow
 ctx.shadowBlur=20;
 ctx.shadowColor="cyan";
 
@@ -305,6 +272,5 @@ ctx.shadowBlur=0;
 }
 
 </script>
-
 </body>
 </html>
