@@ -2,124 +2,226 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Farm Game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Farm Tycoon Pro</title>
+
 <style>
 body {
+    margin: 0;
     font-family: Arial;
-    background: #e6f7e6;
+    background: #dff9fb;
     text-align: center;
 }
-.container {
-    background: white;
-    padding: 20px;
-    margin: 20px auto;
-    width: 350px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px gray;
+
+#map {
+    display: grid;
+    grid-template-columns: repeat(6, 60px);
+    gap: 5px;
+    justify-content: center;
+    margin: 20px;
 }
-button {
-    margin: 5px;
+
+.tile {
+    width: 60px;
+    height: 60px;
+    background: #6ab04c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 20px;
+}
+
+.panel {
+    background: white;
+    margin: 10px;
     padding: 10px;
+    border-radius: 10px;
+}
+
+button {
+    margin: 4px;
+    padding: 8px;
     cursor: pointer;
 }
 </style>
 </head>
+
 <body>
 
-<h1>🌾 FARMING GAME</h1>
+<h1>🌾 FARM TYCOON PRO</h1>
 
-<div class="container">
-    <p id="status"></p>
+<div class="panel" id="stats"></div>
 
-    <button onclick="action('planter')">🌱 Planter</button>
-    <button onclick="action('recolter')">🌾 Récolter</button>
-    <button onclick="action('vendre')">🏪 Vendre</button>
-    <button onclick="action('elever')">🐔 Élever</button>
-    <button onclick="action('ameliorer')">🔧 Améliorer</button>
-    <button onclick="nextDay()">⏭️ Jour suivant</button>
+<div id="map"></div>
+
+<div class="panel">
+    <h3>🏰 Bâtiments</h3>
+    <button onclick="build('grange')">Grange (20💰)</button>
+    <button onclick="build('silo')">Silo (30💰)</button>
+    <button onclick="build('usine')">Usine (80💰)</button>
+</div>
+
+<div class="panel">
+    <h3>🎮 Craft</h3>
+    <button onclick="craft('pain')">🍞 Pain (5 blé)</button>
+    <button onclick="craft('engrais')">🌱 Engrais (10 blé)</button>
 </div>
 
 <script>
-let state = {
-    or: 10,
-    ble: 0,
-    champs: 1,
-    poules: 0,
-    jour: 1,
-    actions: 3,
-    bonus: 1
+
+// ---------------- STATE ----------------
+let game = {
+    money: 50,
+    wheat: 0,
+    inventory: { pain: 0, engrais: 0 },
+    workers: 0,
+    buildings: [],
+    tiles: [],
+    bossTimer: 0
 };
 
-function event() {
-    let events = [
-        ["🌧️ Pluie", 1.5],
-        ["🐀 Rats", 0.9],
-        ["🧑‍🌾 Marchand", 1.2],
-        ["☀️ Normal", 1.0]
-    ];
-    let e = events[Math.floor(Math.random() * events.length)];
-    state.bonus = e[1];
-    alert("ÉVÉNEMENT: " + e[0]);
+// ---------------- MAP ----------------
+const map = document.getElementById("map");
+
+function initMap() {
+    for (let i = 0; i < 36; i++) {
+        let tile = {
+            type: "terrain",
+            crop: false
+        };
+        game.tiles.push(tile);
+    }
 }
 
+function drawMap() {
+    map.innerHTML = "";
+
+    game.tiles.forEach((t, i) => {
+        let div = document.createElement("div");
+        div.className = "tile";
+
+        if (t.type === "grange") div.textContent = "🏚️";
+        else if (t.type === "silo") div.textContent = "🏪";
+        else if (t.type === "usine") div.textContent = "🏭";
+        else if (t.crop) div.textContent = "🌾";
+        else div.textContent = "🌱";
+
+        div.onclick = () => clickTile(i);
+
+        map.appendChild(div);
+    });
+}
+
+// ---------------- TILE INTERACTION ----------------
+function clickTile(i) {
+    let t = game.tiles[i];
+
+    if (t.type === "terrain") {
+        t.crop = !t.crop;
+        if (t.crop) game.wheat += 2;
+    }
+
+    if (t.type === "usine") {
+        game.money += 5;
+    }
+
+    update();
+    drawMap();
+}
+
+// ---------------- BUILDINGS ----------------
+function build(type) {
+    if (type === "grange" && game.money >= 20) {
+        game.money -= 20;
+        game.tiles[randomTile()].type = "grange";
+        game.workers += 1;
+    }
+
+    if (type === "silo" && game.money >= 30) {
+        game.money -= 30;
+        game.tiles[randomTile()].type = "silo";
+    }
+
+    if (type === "usine" && game.money >= 80) {
+        game.money -= 80;
+        game.tiles[randomTile()].type = "usine";
+    }
+
+    update();
+    drawMap();
+}
+
+function randomTile() {
+    return Math.floor(Math.random() * game.tiles.length);
+}
+
+// ---------------- CRAFT ----------------
+function craft(item) {
+    if (item === "pain" && game.wheat >= 5) {
+        game.wheat -= 5;
+        game.inventory.pain++;
+    }
+
+    if (item === "engrais" && game.wheat >= 10) {
+        game.wheat -= 10;
+        game.inventory.engrais++;
+    }
+
+    update();
+}
+
+// ---------------- AI WORKERS ----------------
+function workersAI() {
+    for (let i = 0; i < game.workers; i++) {
+        game.wheat += 1;
+    }
+}
+
+// ---------------- EVENTS ----------------
+function events() {
+    game.bossTimer++;
+
+    // rats attack
+    if (Math.random() < 0.1) {
+        let loss = Math.floor(game.wheat * 0.2);
+        game.wheat -= loss;
+        alert("🐀 Attaque de rats ! -" + loss + " blé");
+    }
+
+    // boss event
+    if (game.bossTimer > 10) {
+        game.bossTimer = 0;
+        let reward = 100;
+        game.money += reward;
+        alert("⚔️ BOSS RAT GÉANT VAINCU ! +" + reward + "💰");
+    }
+}
+
+// ---------------- UI ----------------
 function update() {
-    document.getElementById("status").innerHTML =
-        "Jour: " + state.jour + "<br>" +
-        "Or: " + state.or + "<br>" +
-        "Blé: " + state.ble + "<br>" +
-        "Champs: " + state.champs + "<br>" +
-        "Poules: " + state.poules + "<br>" +
-        "Actions restantes: " + state.actions;
+    document.getElementById("stats").innerHTML =
+        `💰 Or: ${game.money} <br>
+        🌾 Blé: ${game.wheat} <br>
+        🧠 Ouvriers: ${game.workers} <br>
+        🍞 Pain: ${game.inventory.pain} <br>
+        🌱 Engrais: ${game.inventory.engrais}`;
 }
 
-function action(type) {
-    if (state.actions <= 0) {
-        alert("Plus d'actions aujourd'hui !");
-        return;
-    }
-
-    if (type === "planter") {
-        state.ble += state.champs * 2;
-    }
-
-    if (type === "recolter") {
-        state.ble += Math.floor(state.champs * 2 * state.bonus);
-    }
-
-    if (type === "vendre") {
-        state.or += Math.floor(state.ble / 2);
-        state.ble = 0;
-    }
-
-    if (type === "elever") {
-        state.poules += 1;
-    }
-
-    if (type === "ameliorer") {
-        if (state.or >= 20) {
-            state.or -= 20;
-            state.champs += 1;
-        } else {
-            alert("Pas assez d'or !");
-        }
-    }
-
-    state.actions--;
+// ---------------- LOOP ----------------
+setInterval(() => {
+    workersAI();
+    events();
     update();
-}
+    drawMap();
+}, 2000);
 
-function nextDay() {
-    state.jour++;
-    state.actions = 3;
-    event();
-
-    state.ble += state.poules * 2;
-
-    update();
-}
-
-event();
+// ---------------- INIT ----------------
+initMap();
 update();
+drawMap();
+
 </script>
 
 </body>
