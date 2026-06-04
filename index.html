@@ -2,11 +2,19 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Football PRO ⚽</title>
+<title>FIFA Mini Pro ⚽</title>
 
 <style>
-body{margin:0;overflow:hidden;background:#0b3d1c;font-family:Arial;}
-canvas{display:block;}
+body{
+margin:0;
+overflow:hidden;
+background:#0b3d1c;
+font-family:Arial;
+}
+
+canvas{
+display:block;
+}
 </style>
 </head>
 
@@ -18,7 +26,10 @@ canvas{display:block;}
 const c=document.getElementById("game");
 const ctx=c.getContext("2d");
 
-// fullscreen
+// ================= CAMERA =================
+let cam={x:0,y:0};
+
+// ================= RESIZE =================
 function resize(){
 c.width=window.innerWidth;
 c.height=window.innerHeight;
@@ -28,28 +39,22 @@ window.addEventListener("resize",resize);
 
 // ================= TEAMS =================
 let teamA=[
-{x:120,y:200},
-{x:120,y:260},
-{x:120,y:320}
+{x:100,y:200},
+{x:100,y:260},
+{x:100,y:320}
 ];
 
 let teamB=[
-{x:700,y:200},
-{x:700,y:260},
-{x:700,y:320}
+{x:900,y:200},
+{x:900,y:260},
+{x:900,y:320}
 ];
 
 let selected=0;
 
 // ================= BALL =================
-let ball={
-x:300,
-y:200,
-vx:0,
-vy:0
-};
-
-let owner="A"; // A ou B ou "free"
+let ball={x:300,y:200,vx:0,vy:0};
+let owner="A";
 
 // ================= SCORE =================
 let scoreA=0;
@@ -74,31 +79,32 @@ let p=teamA[selected];
 ball.x=p.x;
 ball.y=p.y;
 
-ball.vx=12;
-ball.vy=(Math.random()-0.5)*5;
+ball.vx=14;
+ball.vy=(Math.random()-0.5)*6;
 
 owner="free";
 }
+
 });
 
 document.addEventListener("keyup",e=>{
 keys[e.code]=false;
 });
 
-// ================= COLLISION (RÉCUP BALL) =================
-function checkBallTake(){
+// ================= BALL TAKE =================
+function takeBall(){
 
-// TEAM A
+// team A
 teamA.forEach(p=>{
-if(Math.hypot(p.x-ball.x,p.y-ball.y)<15){
+if(Math.hypot(p.x-ball.x,p.y-ball.y)<18){
 owner="A";
 selected=teamA.indexOf(p);
 }
 });
 
-// TEAM B
+// team B
 teamB.forEach(p=>{
-if(Math.hypot(p.x-ball.x,p.y-ball.y)<15){
+if(Math.hypot(p.x-ball.x,p.y-ball.y)<18){
 owner="B";
 }
 });
@@ -110,18 +116,22 @@ function update(){
 let p=teamA[selected];
 
 // MOVE PLAYER
-if(keys["ArrowUp"]) p.y-=5;
-if(keys["ArrowDown"]) p.y+=5;
-if(keys["ArrowLeft"]) p.x-=5;
-if(keys["ArrowRight"]) p.x+=5;
+if(keys["ArrowUp"]) p.y-=6;
+if(keys["ArrowDown"]) p.y+=6;
+if(keys["ArrowLeft"]) p.x-=6;
+if(keys["ArrowRight"]) p.x+=6;
+
+// CAMERA FOLLOW
+cam.x += (p.x - cam.x - c.width/2)*0.08;
+cam.y += (p.y - cam.y - c.height/2)*0.08;
 
 // BALL FOLLOW PLAYER
 if(owner==="A"){
-ball.x += (p.x-ball.x)*0.25;
-ball.y += (p.y-ball.y)*0.25;
+ball.x += (p.x-ball.x)*0.3;
+ball.y += (p.y-ball.y)*0.3;
 }
 
-// BALL PHYSICS
+// BALL FREE PHYSICS
 if(owner==="free"){
 ball.x+=ball.vx;
 ball.y+=ball.vy;
@@ -130,7 +140,7 @@ ball.vx*=0.98;
 ball.vy*=0.98;
 }
 
-// TEAM B IA
+// TEAM B AI
 teamB.forEach(e=>{
 let dx=ball.x-e.x;
 let dy=ball.y-e.y;
@@ -139,27 +149,22 @@ e.x+=dx*0.02;
 e.y+=dy*0.02;
 });
 
-// TEAM B POSSESSION
+// TEAM B CONTROL BALL
 if(owner==="B"){
 ball.x+=(teamB[0].x-ball.x)*0.05;
 ball.y+=(teamB[0].y-ball.y)*0.05;
 }
 
-// 🔥 BALL RECOVERY
-checkBallTake();
+// BALL RECOVERY
+takeBall();
 
-// GOAL RIGHT
-if(ball.x>c.width-30 &&
-ball.y>c.height/2-100 &&
-ball.y<c.height/2+100){
+// GOALS
+if(ball.x>1000 && ball.y>200){
 scoreA++;
 reset();
 }
 
-// GOAL LEFT
-if(ball.x<30 &&
-ball.y>c.height/2-100 &&
-ball.y<c.height/2+100){
+if(ball.x<0 && ball.y>200){
 scoreB++;
 reset();
 }
@@ -172,22 +177,18 @@ requestAnimationFrame(update);
 function reset(){
 
 teamA=[
-{x:120,y:200},
-{x:120,y:260},
-{x:120,y:320}
+{x:100,y:200},
+{x:100,y:260},
+{x:100,y:320}
 ];
 
 teamB=[
-{x:700,y:200},
-{x:700,y:260},
-{x:700,y:320}
+{x:900,y:200},
+{x:900,y:260},
+{x:900,y:320}
 ];
 
-ball.x=c.width/2;
-ball.y=c.height/2;
-ball.vx=0;
-ball.vy=0;
-
+ball={x:300,y:200,vx:0,vy:0};
 owner="A";
 }
 
@@ -195,28 +196,30 @@ owner="A";
 function field(){
 
 ctx.fillStyle="#1f7a2e";
-ctx.fillRect(0,0,c.width,c.height);
-
-ctx.strokeStyle="white";
+ctx.fillRect(-cam.x,-cam.y,c.width+cam.x*2,c.height+cam.y*2);
 
 // center line
+ctx.strokeStyle="white";
 ctx.beginPath();
-ctx.moveTo(c.width/2,0);
-ctx.lineTo(c.width/2,c.height);
+ctx.moveTo(500-cam.x,0-cam.y);
+ctx.lineTo(500-cam.x,600-cam.y);
 ctx.stroke();
 
 // circle
 ctx.beginPath();
-ctx.arc(c.width/2,c.height/2,80,0,Math.PI*2);
+ctx.arc(500-cam.x,300-cam.y,80,0,Math.PI*2);
 ctx.stroke();
 
 // goals
-ctx.strokeRect(20,c.height/2-100,20,200);
-ctx.strokeRect(c.width-40,c.height/2-100,20,200);
+ctx.strokeRect(0-cam.x,200-cam.y,20,200);
+ctx.strokeRect(980-cam.x,200-cam.y,20,200);
 }
 
-// ================= DRAW PLAYER =================
+// ================= PLAYER =================
 function drawPlayer(x,y,color){
+
+x-=cam.x;
+y-=cam.y;
 
 ctx.fillStyle="#ffcc80";
 ctx.beginPath();
@@ -245,15 +248,14 @@ drawPlayer(p.x,p.y,"red");
 // ball
 ctx.fillStyle="white";
 ctx.beginPath();
-ctx.arc(ball.x,ball.y,6,0,Math.PI*2);
+ctx.arc(ball.x-cam.x,ball.y-cam.y,6,0,Math.PI*2);
 ctx.fill();
 
 // UI
 ctx.fillStyle="white";
 ctx.font="24px Arial";
-ctx.fillText("TEAM A: "+scoreA,20,40);
-ctx.fillText("TEAM B: "+scoreB,20,70);
-ctx.fillText("Q = changer joueur | SPACE = tir | touche balle = récupération",20,100);
+ctx.fillText("A: "+scoreA+"  |  B: "+scoreB,20,40);
+ctx.fillText("Q switch | SPACE shoot | Arrow move",20,70);
 }
 
 update();
