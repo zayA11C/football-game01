@@ -1,18 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Football Stadium ⚽</title>
+<title>Football Game PRO ⚽</title>
 
 <style>
 body{
 margin:0;
 overflow:hidden;
 background:black;
+font-family:Arial;
 }
-canvas{
-display:block;
-}
+canvas{display:block;}
 </style>
 </head>
 
@@ -21,99 +20,121 @@ display:block;
 <canvas id="game"></canvas>
 
 <script>
-const c = document.getElementById("game");
-const ctx = c.getContext("2d");
+const c=document.getElementById("game");
+const ctx=c.getContext("2d");
 
-// plein écran
+// fullscreen
 function resize(){
-c.width = window.innerWidth;
-c.height = window.innerHeight;
+c.width=window.innerWidth;
+c.height=window.innerHeight;
 }
 resize();
 window.addEventListener("resize",resize);
 
-// ⚽ équipe joueur
-let team = [
+// ⚽ équipe
+let team=[
 {x:120,y:200},
 {x:120,y:260},
 {x:120,y:320}
 ];
 
-let selected = 0; // joueur contrôlé
+let selected=0;
 
-// ⚽ ennemis
-let enemies = [
+// 🤖 ennemis
+let enemies=[
 {x:600,y:200},
 {x:650,y:300},
 {x:700,y:250}
 ];
 
 // ⚽ balle
-let ball = {x:150,y:200,vx:0,vy:0};
-let owner = "player"; // player ou enemy
+let ball={x:150,y:200,vx:0,vy:0};
+let owner="player";
 
-let score = 0;
+// score
+let score=0;
 
 // clavier
-let keys = {};
+let keys={};
 document.addEventListener("keydown",e=>keys[e.code]=true);
 document.addEventListener("keyup",e=>keys[e.code]=false);
 
-// changer joueur
+// changer joueur + tir
 document.addEventListener("keydown",e=>{
-if(e.code==="KeyQ") selected = (selected+1)%team.length;
+
+if(e.code==="KeyQ"){
+selected=(selected+1)%team.length;
+}
+
+// ⚽ TIR
+if(e.code==="Space" && owner==="player"){
+let p=team[selected];
+
+ball.x=p.x;
+ball.y=p.y;
+
+ball.vx=10;
+ball.vy=(Math.random()-0.5)*4;
+
+owner="ball";
+}
+
 });
 
 // 🎮 update
 function update(){
 
-let p = team[selected];
+let p=team[selected];
 
 // mouvement joueur
-if(keys["ArrowUp"]) p.y -= 5;
-if(keys["ArrowDown"]) p.y += 5;
-if(keys["ArrowLeft"]) p.x -= 5;
-if(keys["ArrowRight"]) p.x += 5;
+if(keys["ArrowUp"]) p.y-=5;
+if(keys["ArrowDown"]) p.y+=5;
+if(keys["ArrowLeft"]) p.x-=5;
+if(keys["ArrowRight"]) p.x+=5;
 
-// PASSE (Espace)
-if(keys["Space"]){
-for(let i=0;i<team.length;i++){
-if(i!==selected){
-ball.x = team[selected].x;
-ball.y = team[selected].y;
-owner = "player";
-}
-}
-}
-
-// balle suit joueur si équipe possède
+// balle suit joueur si possession
 if(owner==="player"){
-ball.x += (team[selected].x - ball.x)*0.2;
-ball.y += (team[selected].y - ball.y)*0.2;
+ball.x += (p.x-ball.x)*0.2;
+ball.y += (p.y-ball.y)*0.2;
 }
 
-// ennemis suivent balle
+// balle physique
+if(owner==="ball"){
+ball.x+=ball.vx;
+ball.y+=ball.vy;
+
+ball.vx*=0.98;
+ball.vy*=0.98;
+}
+
+// ennemis IA
 enemies.forEach(e=>{
-if(e.x < ball.x) e.x += 2.5;
-if(e.x > ball.x) e.x -= 2.5;
-if(e.y < ball.y) e.y += 2.5;
-if(e.y > ball.y) e.y -= 2.5;
+let dx=ball.x-e.x;
+let dy=ball.y-e.y;
+
+e.x+=dx*0.02;
+e.y+=dy*0.02;
+
+// prise balle
+if(Math.hypot(e.x-ball.x,e.y-ball.y)<15){
+owner="enemy";
+}
 });
 
-// tir des ennemis
+// ennemis shoot vers gauche
 if(owner==="enemy"){
-ball.x += (enemies[0].x - ball.x)*0.05;
-ball.y += (enemies[0].y - ball.y)*0.05;
+ball.x+= (100-ball.x)*0.05;
+ball.y+= (200-ball.y)*0.05;
 }
 
-// but droite
-if(ball.x > c.width-30){
+// but droit
+if(ball.x>c.width-30){
 score++;
 reset();
 }
 
 // but gauche
-if(ball.x < 30){
+if(ball.x<30){
 score--;
 reset();
 }
@@ -124,24 +145,25 @@ requestAnimationFrame(update);
 
 // reset
 function reset(){
-team.forEach(p=>{p.x=120;p.y=200+Math.random()*100});
-ball.x = 150;
-ball.y = 200;
+team.forEach(p=>{
+p.x=120;
+p.y=200+Math.random()*100;
+});
+ball.x=150;
+ball.y=200;
+ball.vx=0;
+ball.vy=0;
 owner="player";
 }
 
-// 🎨 stade
-function stadium(){
+// 🏟️ stade
+function field(){
 
-// terrain
 ctx.fillStyle="#1f7a2e";
 ctx.fillRect(0,0,c.width,c.height);
 
-// lignes
+// ligne centre
 ctx.strokeStyle="white";
-ctx.lineWidth=3;
-
-// centre
 ctx.beginPath();
 ctx.moveTo(c.width/2,0);
 ctx.lineTo(c.width/2,c.height);
@@ -152,16 +174,12 @@ ctx.beginPath();
 ctx.arc(c.width/2,c.height/2,80,0,Math.PI*2);
 ctx.stroke();
 
-// surface
+// cages
 ctx.strokeRect(c.width-120,c.height/2-120,100,240);
-
-// tribunes (public)
-ctx.fillStyle="#444";
-ctx.fillRect(0,0,c.width,60);
-ctx.fillRect(0,c.height-60,c.width,60);
+ctx.strokeRect(20,c.height/2-120,100,240);
 }
 
-// 👤 joueur style
+// 👤 joueur
 function drawPlayer(x,y,color){
 
 ctx.fillStyle="#ffcc80";
@@ -173,10 +191,10 @@ ctx.fillStyle=color;
 ctx.fillRect(x-6,y+8,12,20);
 }
 
-// 🎮 draw
+// 🎨 draw
 function draw(){
 
-stadium();
+field();
 
 // équipe
 team.forEach((p,i)=>{
@@ -199,8 +217,9 @@ ctx.fillStyle="white";
 ctx.font="30px Arial";
 ctx.fillText("Score: "+score,20,40);
 
-// info
-ctx.fillText("Q = changer joueur | SPACE = passe",20,80);
+// commandes
+ctx.font="18px Arial";
+ctx.fillText("Arrow = move | Q = switch | SPACE = shoot",20,80);
 }
 
 update();
