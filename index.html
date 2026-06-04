@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Neon Ping Pong 🏓⚡</title>
+<title>Ultra Ping Pong AI 🏓⚡</title>
 
 <style>
 body{
@@ -12,7 +12,7 @@ font-family:Arial;
 background:black;
 }
 
-/* ===== MENU STYLE (comme ton jeu précédent) ===== */
+/* ===== MENU ===== */
 #menu{
 position:absolute;
 top:0;left:0;
@@ -53,7 +53,6 @@ left:10px;
 color:white;
 z-index:5;
 display:none;
-font-size:20px;
 }
 
 canvas{display:block;}
@@ -64,15 +63,14 @@ canvas{display:block;}
 
 <!-- MENU -->
 <div id="menu">
-<h1>🏓 NEON PING PONG ⚡</h1>
+<h1>🏓 ULTRA PING PONG AI ⚡</h1>
 <button onclick="startGame()">START</button>
-<p>W/S = gauche | ↑/↓ = droite</p>
+<p>W/S = gauche | Touch = mobile | AI droite 🤖</p>
 </div>
 
 <!-- HUD -->
 <div id="hud">
-Score Gauche: <span id="scoreL">0</span> |
-Score Droite: <span id="scoreR">0</span>
+Score: <span id="scoreL">0</span> - <span id="scoreR">0</span>
 </div>
 
 <canvas id="game"></canvas>
@@ -88,22 +86,34 @@ c.height=window.innerHeight;
 resize();
 window.addEventListener("resize",resize);
 
-// 🏓 paddles
-let leftPaddle,rightPaddle;
+// ================= GAME =================
+let running=false;
 
-// ⚪ ball
+// paddles
+let left,right;
+
+// ball
 let ball;
 
-// scores
+// score
 let scoreL=0;
 let scoreR=0;
-
-let running=false;
 
 // input
 let keys={};
 document.addEventListener("keydown",e=>keys[e.code]=true);
 document.addEventListener("keyup",e=>keys[e.code]=false);
+
+// 🔊 sound (simple ping)
+function beep(freq=600){
+let ctxA=new (window.AudioContext||window.webkitAudioContext)();
+let o=ctxA.createOscillator();
+o.type="square";
+o.frequency.value=freq;
+o.connect(ctxA.destination);
+o.start();
+o.stop(ctxA.currentTime+0.05);
+}
 
 // ================= START =================
 function startGame(){
@@ -118,20 +128,20 @@ loop();
 // ================= INIT =================
 function init(){
 
-leftPaddle={
+left={
 x:20,
-y:c.height/2-60,
+y:c.height/2-70,
 w:15,
-h:120,
+h:140,
 speed:7
 };
 
-rightPaddle={
+right={
 x:c.width-35,
-y:c.height/2-60,
+y:c.height/2-70,
 w:15,
-h:120,
-speed:7
+h:140,
+speed:6
 };
 
 ball={
@@ -146,6 +156,18 @@ scoreL=0;
 scoreR=0;
 }
 
+// ================= AI =================
+function ai(){
+let target=ball.y - right.h/2;
+right.y += (target - right.y)*0.08; // smooth AI
+}
+
+// ================= TOUCH MOBILE =================
+document.addEventListener("touchmove",e=>{
+let t=e.touches[0];
+left.y=t.clientY-left.h/2;
+});
+
 // ================= LOOP =================
 function loop(){
 if(!running) return;
@@ -158,65 +180,80 @@ requestAnimationFrame(loop);
 // ================= UPDATE =================
 function update(){
 
-// move paddles
-if(keys["KeyW"]) leftPaddle.y-=leftPaddle.speed;
-if(keys["KeyS"]) leftPaddle.y+=leftPaddle.speed;
+// left control (keyboard)
+if(keys["KeyW"]) left.y-=left.speed;
+if(keys["KeyS"]) left.y+=left.speed;
 
-if(keys["ArrowUp"]) rightPaddle.y-=rightPaddle.speed;
-if(keys["ArrowDown"]) rightPaddle.y+=rightPaddle.speed;
+// AI right
+ai();
 
 // limits
-leftPaddle.y=Math.max(0,Math.min(c.height-leftPaddle.h,leftPaddle.y));
-rightPaddle.y=Math.max(0,Math.min(c.height-leftPaddle.h,rightPaddle.y));
+left.y=Math.max(0,Math.min(c.height-left.h,left.y));
+right.y=Math.max(0,Math.min(c.height-right.h,right.y));
 
-// ball move
+// ⚡ SPEED INCREASE (addiction)
+ball.vx *= 1.0005;
+ball.vy *= 1.0005;
+
+// move ball
 ball.x+=ball.vx;
 ball.y+=ball.vy;
 
 // bounce top/bottom
 if(ball.y<0 || ball.y>c.height) ball.vy*=-1;
 
-// collision left
-if(
-ball.x-ball.r<leftPaddle.x+leftPaddle.w &&
-ball.y>leftPaddle.y &&
-ball.y<leftPaddle.y+leftPaddle.h
-){
-ball.vx*=-1;
-ball.x=leftPaddle.x+leftPaddle.w+ball.r;
+// ================= SPIN EFFECT 🎯 =================
+// quand la balle touche raquette → angle change
+function spin(paddle){
+let diff = ball.y - (paddle.y + paddle.h/2);
+ball.vy += diff*0.02; // courbe
 }
 
-// collision right
-if(
-ball.x+ball.r>rightPaddle.x &&
-ball.y>rightPaddle.y &&
-ball.y<rightPaddle.y+rightPaddle.h
-){
+// left collision
+if(ball.x-ball.r<left.x+left.w &&
+ball.y>left.y &&
+ball.y<left.y+left.h){
+
 ball.vx*=-1;
-ball.x=rightPaddle.x-ball.r;
+spin(left);
+ball.x=left.x+left.w+ball.r;
+beep(500);
+}
+
+// right collision
+if(ball.x+ball.r>right.x &&
+ball.y>right.y &&
+ball.y<right.y+right.h){
+
+ball.vx*=-1;
+spin(right);
+ball.x=right.x-ball.r;
+beep(700);
 }
 
 // score
 if(ball.x<0){
 scoreR++;
-resetBall();
+reset();
+beep(200);
 }
 
 if(ball.x>c.width){
 scoreL++;
-resetBall();
+reset();
+beep(200);
 }
 
-// UI
+// HUD
 document.getElementById("scoreL").innerText=scoreL;
 document.getElementById("scoreR").innerText=scoreR;
 }
 
-// ================= RESET BALL =================
-function resetBall(){
+// ================= RESET =================
+function reset(){
 ball.x=c.width/2;
 ball.y=c.height/2;
-ball.vx*=-1;
+ball.vx=(Math.random()>0.5?6:-6);
 ball.vy=(Math.random()-0.5)*6;
 }
 
@@ -237,18 +274,17 @@ ctx.setLineDash([]);
 
 // paddles
 ctx.fillStyle="white";
-ctx.fillRect(leftPaddle.x,leftPaddle.y,leftPaddle.w,leftPaddle.h);
-ctx.fillRect(rightPaddle.x,rightPaddle.y,rightPaddle.w,rightPaddle.h);
+ctx.fillRect(left.x,left.y,left.w,left.h);
+ctx.fillRect(right.x,right.y,right.w,right.h);
 
-// ball
+// ball glow 🔥
+ctx.shadowBlur=20;
+ctx.shadowColor="cyan";
+
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
 ctx.fill();
 
-// glow effect
-ctx.shadowBlur=15;
-ctx.shadowColor="cyan";
-ctx.fill();
 ctx.shadowBlur=0;
 }
 
