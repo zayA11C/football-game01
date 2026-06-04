@@ -2,16 +2,14 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Boat Taxi 🚤</title>
+<title>Ball Rings Game ⚪</title>
 
 <style>
 body{
 margin:0;
 overflow:hidden;
-background:#0b3d91;
-font-family:Arial;
+background:#111;
 }
-
 canvas{
 display:block;
 }
@@ -33,123 +31,103 @@ c.height=window.innerHeight;
 resize();
 window.addEventListener("resize",resize);
 
-// 🚤 bateau joueur
-let boat={
+// ⚪ balle
+let ball={
 x:200,
 y:200,
-speed:4
+vx:3,
+vy:2,
+r:8
 };
 
-// 👤 client
-let client={
-x:500,
-y:300,
-taken:false
-};
-
-// 🎯 destination
-let dest={
-x:800,
-y:200
-};
+// 🔵 cercles
+let rings=[];
 
 // 💰 score
 let score=0;
 
-// clavier
-let keys={};
-document.addEventListener("keydown",e=>keys[e.code]=true);
-document.addEventListener("keyup",e=>keys[e.code]=false);
+// 🎮 créer un cercle
+function newRing(){
+rings.push({
+x:Math.random()*c.width,
+y:Math.random()*c.height,
+r:40,
+color:"white",
+passed:false
+});
+}
+
+// init cercles
+for(let i=0;i<5;i++) newRing();
 
 // 🎮 update
 function update(){
 
-// mouvement bateau
-if(keys["ArrowUp"]) boat.y-=boat.speed;
-if(keys["ArrowDown"]) boat.y+=boat.speed;
-if(keys["ArrowLeft"]) boat.x-=boat.speed;
-if(keys["ArrowRight"]) boat.x+=boat.speed;
+// mouvement balle
+ball.x+=ball.vx;
+ball.y+=ball.vy;
 
-// prendre client
-if(!client.taken && dist(boat,client)<30){
-client.taken=true;
-}
+// rebond murs
+if(ball.x<0 || ball.x>c.width) ball.vx*=-1;
+if(ball.y<0 || ball.y>c.height) ball.vy*=-1;
 
-// transporter client vers destination
-if(client.taken){
-client.x = boat.x;
-client.y = boat.y;
-}
+// collision cercles
+rings.forEach(r=>{
 
-// livrer client
-if(client.taken && dist(boat,dest)<40){
+let d=Math.hypot(ball.x-r.x,ball.y-r.y);
+
+if(d<r.r && !r.passed){
+r.passed=true;
+r.color=randomColor();
 score++;
-reset();
+
+// nouveau cercle après réussite
+setTimeout(()=>{
+rings.splice(rings.indexOf(r),1);
+newRing();
+},300);
 }
+
+});
 
 draw();
 requestAnimationFrame(update);
 }
 
-// 🔁 reset
-function reset(){
-
-boat.x=200;
-boat.y=200;
-
-client.x=Math.random()*c.width;
-client.y=Math.random()*c.height;
-client.taken=false;
-
-dest.x=Math.random()*c.width;
-dest.y=Math.random()*c.height;
-}
-
-// 📏 distance
-function dist(a,b){
-return Math.hypot(a.x-b.x,a.y-b.y);
-}
-
-// 🌊 map
-function map(){
-
-// eau
-ctx.fillStyle="#1e88e5";
-ctx.fillRect(0,0,c.width,c.height);
-
-// île client
-ctx.fillStyle="yellow";
-ctx.beginPath();
-ctx.arc(client.x,client.y,10,0,Math.PI*2);
-ctx.fill();
-
-// île destination
-ctx.fillStyle="lime";
-ctx.beginPath();
-ctx.arc(dest.x,dest.y,15,0,Math.PI*2);
-ctx.fill();
-}
-
-// 🚤 bateau
-function drawBoat(){
-
-ctx.fillStyle="white";
-ctx.fillRect(boat.x,boat.y,20,20);
+// 🌈 couleur random
+function randomColor(){
+return `hsl(${Math.random()*360},100%,60%)`;
 }
 
 // 🎨 draw
 function draw(){
 
-map();
-drawBoat();
+ctx.clearRect(0,0,c.width,c.height);
 
-// UI
+// cercles
+rings.forEach(r=>{
+ctx.strokeStyle=r.color;
+ctx.lineWidth=5;
+
+ctx.beginPath();
+ctx.arc(r.x,r.y,r.r,0,Math.PI*2);
+ctx.stroke();
+});
+
+// balle
 ctx.fillStyle="white";
-ctx.font="24px Arial";
+ctx.beginPath();
+ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
+ctx.fill();
+
+// score
+ctx.fillStyle="white";
+ctx.font="30px Arial";
 ctx.fillText("Score: "+score,20,40);
 
+// info
 ctx.font="16px Arial";
-ctx.fillText("Arrow keys = move | pick client (yellow) → deliver (green)",20,70);
+ctx.fillText("La balle traverse les cercles en continu ⚪🌈",20,70);
 }
 
 update();
