@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>3rd Person Game</title>
+<title>GTA Character Test</title>
 <style>
 body { margin:0; overflow:hidden; }
 #ui{
@@ -19,8 +19,8 @@ body { margin:0; overflow:hidden; }
 <body>
 
 <div id="ui">
-🎮 GTA-LIKE TEST<br>
-WASD = bouger | Souris = caméra
+🎮 GTA 3rd Person<br>
+WASD = bouger | souris = caméra
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -31,12 +31,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 
 // ================= CAMERA =================
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth/window.innerHeight,
-  0.1,
-  1000
-);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
 
 // ================= RENDERER =================
 const renderer = new THREE.WebGLRenderer();
@@ -49,17 +44,54 @@ light.position.set(5,10,5);
 scene.add(light);
 
 // ================= GROUND =================
-const groundGeo = new THREE.PlaneGeometry(200,200);
-const groundMat = new THREE.MeshBasicMaterial({color:0x2ecc71});
-const ground = new THREE.Mesh(groundGeo, groundMat);
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(200,200),
+  new THREE.MeshLambertMaterial({color:0x2ecc71})
+);
 ground.rotation.x = -Math.PI/2;
 scene.add(ground);
 
-// ================= PLAYER =================
-const playerGeo = new THREE.BoxGeometry(1,2,1);
-const playerMat = new THREE.MeshBasicMaterial({color:0xff0000});
-const player = new THREE.Mesh(playerGeo, playerMat);
-player.position.y = 1;
+// ================= "VRAI BONHOMME" =================
+const player = new THREE.Group();
+
+// corps
+const body = new THREE.Mesh(
+  new THREE.BoxGeometry(1,1.5,0.5),
+  new THREE.MeshLambertMaterial({color:0x1565c0})
+);
+body.position.y = 1.5;
+player.add(body);
+
+// tête
+const head = new THREE.Mesh(
+  new THREE.SphereGeometry(0.4,16,16),
+  new THREE.MeshLambertMaterial({color:0xffcc99})
+);
+head.position.y = 2.6;
+player.add(head);
+
+// jambes
+const legGeo = new THREE.BoxGeometry(0.3,1,0.3);
+
+const leg1 = new THREE.Mesh(legGeo,new THREE.MeshLambertMaterial({color:0x333}));
+leg1.position.set(-0.3,0.5,0);
+player.add(leg1);
+
+const leg2 = leg1.clone();
+leg2.position.x = 0.3;
+player.add(leg2);
+
+// bras
+const armGeo = new THREE.BoxGeometry(0.3,1,0.3);
+
+const arm1 = new THREE.Mesh(armGeo,new THREE.MeshLambertMaterial({color:0x1565c0}));
+arm1.position.set(-0.8,1.8,0);
+player.add(arm1);
+
+const arm2 = arm1.clone();
+arm2.position.x = 0.8;
+player.add(arm2);
+
 scene.add(player);
 
 // ================= INPUT =================
@@ -67,49 +99,50 @@ let keys = {};
 document.addEventListener("keydown", e=>keys[e.key.toLowerCase()]=true);
 document.addEventListener("keyup", e=>keys[e.key.toLowerCase()]=false);
 
-// ================= CAMERA CONTROL =================
+// caméra rotation souris
 let camAngle = 0;
-
-// souris rotation
 document.addEventListener("mousemove", (e)=>{
   camAngle += e.movementX * 0.002;
 });
 
 // ================= MOVE =================
 function move(){
-  let speed = 0.15;
+  let speed = 0.12;
 
-  let forwardX = Math.sin(camAngle);
-  let forwardZ = Math.cos(camAngle);
+  let fx = Math.sin(camAngle);
+  let fz = Math.cos(camAngle);
 
-  let rightX = Math.sin(camAngle + Math.PI/2);
-  let rightZ = Math.cos(camAngle + Math.PI/2);
+  let rx = Math.sin(camAngle + Math.PI/2);
+  let rz = Math.cos(camAngle + Math.PI/2);
 
   if(keys["w"]){
-    player.position.x += forwardX * speed;
-    player.position.z += forwardZ * speed;
+    player.position.x += fx * speed;
+    player.position.z += fz * speed;
   }
   if(keys["s"]){
-    player.position.x -= forwardX * speed;
-    player.position.z -= forwardZ * speed;
+    player.position.x -= fx * speed;
+    player.position.z -= fz * speed;
   }
   if(keys["a"]){
-    player.position.x -= rightX * speed;
-    player.position.z -= rightZ * speed;
+    player.position.x -= rx * speed;
+    player.position.z -= rz * speed;
   }
   if(keys["d"]){
-    player.position.x += rightX * speed;
-    player.position.z += rightZ * speed;
+    player.position.x += rx * speed;
+    player.position.z += rz * speed;
   }
+
+  // tourner le perso vers direction caméra
+  player.rotation.y = camAngle;
 }
 
 // ================= CAMERA FOLLOW =================
 function updateCamera(){
-  let distance = 6;
-  let height = 3;
+  const dist = 6;
+  const height = 3;
 
-  camera.position.x = player.position.x - Math.sin(camAngle) * distance;
-  camera.position.z = player.position.z - Math.cos(camAngle) * distance;
+  camera.position.x = player.position.x - Math.sin(camAngle) * dist;
+  camera.position.z = player.position.z - Math.cos(camAngle) * dist;
   camera.position.y = player.position.y + height;
 
   camera.lookAt(player.position);
