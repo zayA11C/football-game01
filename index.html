@@ -1,17 +1,15 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>FIFA Ultra Real ⚽</title>
+<title>Football FIX ⚽</title>
 
 <style>
 body{
 margin:0;
 overflow:hidden;
-background:#0b5d1e;
-font-family:Arial;
+background:#1b5e20;
 }
-
 canvas{
 display:block;
 }
@@ -23,171 +21,65 @@ display:block;
 <canvas id="game"></canvas>
 
 <script>
-const c=document.getElementById("game");
-const ctx=c.getContext("2d");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-// plein écran
+// plein écran SAFE
 function resize(){
-c.width=window.innerWidth;
-c.height=window.innerHeight;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 }
 resize();
-window.addEventListener("resize",resize);
+window.addEventListener("resize", resize);
 
-// ⚽ joueur
-let p={x:150,y:200,vx:0,vy:0,speed:5};
+// joueur
+let player = {x:100,y:100};
 
-// ⚽ balle physique
-let b={x:200,y:200,vx:0,vy:0,friction:0.98};
-let owned=true;
+// balle
+let ball = {x:140,y:100};
 
-// 🤖 ennemis
-let enemies=[
-{x:600,y:200},
-{x:650,y:350},
-{x:700,y:150}
-];
+// input
+let keys = {};
+document.addEventListener("keydown",e=>keys[e.code]=true);
+document.addEventListener("keyup",e=>keys[e.code]=false);
 
-// 🥅 but
-let goalX=canvas.width-30;
-
-let score=0;
-
-// clavier
-let k={};
-document.addEventListener("keydown",e=>k[e.code]=true);
-document.addEventListener("keyup",e=>k[e.code]=false);
-
-// 🎮 terrain FIFA
-function field(){
-ctx.fillStyle="#1f7a2e";
-ctx.fillRect(0,0,c.width,c.height);
-
-// ligne centrale
-ctx.strokeStyle="white";
-ctx.lineWidth=3;
-
-ctx.beginPath();
-ctx.moveTo(c.width/2,0);
-ctx.lineTo(c.width/2,c.height);
-ctx.stroke();
-
-// cercle centre
-ctx.beginPath();
-ctx.arc(c.width/2,c.height/2,80,0,Math.PI*2);
-ctx.stroke();
-
-// surface de but
-ctx.strokeRect(c.width-120,c.height/2-120,100,240);
-}
-
-// 👤 joueur humain
-function player(x,y,color){
-ctx.fillStyle="#ffdbac";
-ctx.beginPath();
-ctx.arc(x,y,10,0,Math.PI*2);
-ctx.fill();
-
-ctx.fillStyle=color;
-ctx.fillRect(x-7,y+10,14,25);
-ctx.fillStyle="#222";
-ctx.fillRect(x-7,y+35,6,12);
-ctx.fillRect(x+1,y+35,6,12);
-}
-
-// 🔁 update physique
 function update(){
 
-// mouvement fluide
-if(k["ArrowUp"]) p.vy=-p.speed;
-else if(k["ArrowDown"]) p.vy=p.speed;
-else p.vy*=0.8;
-
-if(k["ArrowLeft"]) p.vx=-p.speed;
-else if(k["ArrowRight"]) p.vx=p.speed;
-else p.vx*=0.8;
-
-p.x+=p.vx;
-p.y+=p.vy;
-
-// ⚽ tir
-if(k["Space"]&&owned){
-owned=false;
-b.vx=10;
-}
+// move
+if(keys["ArrowUp"]) player.y-=5;
+if(keys["ArrowDown"]) player.y+=5;
+if(keys["ArrowLeft"]) player.x-=5;
+if(keys["ArrowRight"]) player.x+=5;
 
 // balle suit joueur
-if(owned){
-b.x=p.x;
-b.y=p.y;
-}else{
-b.x+=b.vx;
-b.y+=b.vy;
-
-b.vx*=b.friction;
-b.vy*=b.friction;
-}
-
-// 🤖 IA intelligente
-enemies.forEach(e=>{
-let dx=b.x-e.x;
-let dy=b.y-e.y;
-
-e.x+=dx*0.02;
-e.y+=dy*0.02;
-
-// prise de balle
-if(Math.hypot(e.x-b.x,e.y-b.y)<15){
-owned=false;
-}
-});
-
-// ⚽ but
-if(b.x>c.width-30 &&
-b.y>c.height/2-80 &&
-b.y<c.height/2+80){
-
-score++;
-
-p.x=150;
-p.y=c.height/2;
-
-b.x=p.x;
-b.y=p.y;
-
-b.vx=0;
-b.vy=0;
-
-owned=true;
-}
+ball.x = player.x + 20;
+ball.y = player.y + 20;
 
 draw();
 requestAnimationFrame(update);
 }
 
-// 🎨 draw
 function draw(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
 
-field();
+// terrain
+ctx.fillStyle="#2e7d32";
+ctx.fillRect(0,0,canvas.width,canvas.height);
 
 // joueur
-player(p.x,p.y,"blue");
-
-// ennemis
-enemies.forEach(e=>{
-player(e.x,e.y,"red");
-});
+ctx.fillStyle="blue";
+ctx.fillRect(player.x,player.y,30,30);
 
 // balle
 ctx.fillStyle="white";
 ctx.beginPath();
-ctx.arc(b.x,b.y,6,0,Math.PI*2);
+ctx.arc(ball.x,ball.y,6,0,Math.PI*2);
 ctx.fill();
 
-// score
+// texte TEST
 ctx.fillStyle="white";
 ctx.font="30px Arial";
-ctx.fillText("Score: "+score,20,40);
+ctx.fillText("SI TU VOIS CA => CA MARCHE ⚽",50,50);
 }
 
 update();
