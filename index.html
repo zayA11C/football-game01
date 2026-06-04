@@ -3,224 +3,144 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Farm Tycoon Pro</title>
+<title>Farm RPG</title>
 
 <style>
 body {
     margin: 0;
+    background: #111;
+    overflow: hidden;
+    color: white;
     font-family: Arial;
-    background: #dff9fb;
-    text-align: center;
 }
 
-#map {
-    display: grid;
-    grid-template-columns: repeat(6, 60px);
-    gap: 5px;
-    justify-content: center;
-    margin: 20px;
-}
-
-.tile {
-    width: 60px;
-    height: 60px;
-    background: #6ab04c;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 20px;
-}
-
-.panel {
-    background: white;
-    margin: 10px;
+#ui {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.6);
     padding: 10px;
-    border-radius: 10px;
+    border-radius: 8px;
 }
 
-button {
-    margin: 4px;
-    padding: 8px;
-    cursor: pointer;
+canvas {
+    display: block;
 }
 </style>
 </head>
 
 <body>
 
-<h1>🌾 FARM TYCOON PRO</h1>
-
-<div class="panel" id="stats"></div>
-
-<div id="map"></div>
-
-<div class="panel">
-    <h3>🏰 Bâtiments</h3>
-    <button onclick="build('grange')">Grange (20💰)</button>
-    <button onclick="build('silo')">Silo (30💰)</button>
-    <button onclick="build('usine')">Usine (80💰)</button>
+<div id="ui">
+    <b>🌾 FARM RPG</b><br>
+    💰 Or: <span id="money">0</span><br>
+    🌾 Blé: <span id="wheat">0</span><br>
+    👇 WASD pour bouger<br>
+    E = interagir
 </div>
 
-<div class="panel">
-    <h3>🎮 Craft</h3>
-    <button onclick="craft('pain')">🍞 Pain (5 blé)</button>
-    <button onclick="craft('engrais')">🌱 Engrais (10 blé)</button>
-</div>
+<canvas id="game"></canvas>
 
 <script>
 
-// ---------------- STATE ----------------
-let game = {
-    money: 50,
-    wheat: 0,
-    inventory: { pain: 0, engrais: 0 },
-    workers: 0,
-    buildings: [],
-    tiles: [],
-    bossTimer: 0
+// ---------------- CANVAS ----------------
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// ---------------- PLAYER ----------------
+let player = {
+    x: 100,
+    y: 100,
+    size: 20,
+    speed: 3
 };
 
-// ---------------- MAP ----------------
-const map = document.getElementById("map");
+// ---------------- GAME STATE ----------------
+let game = {
+    money: 10,
+    wheat: 0
+};
 
-function initMap() {
-    for (let i = 0; i < 36; i++) {
-        let tile = {
-            type: "terrain",
-            crop: false
-        };
-        game.tiles.push(tile);
-    }
+// ---------------- NPC ----------------
+let npc = {
+    x: 300,
+    y: 200,
+    size: 20,
+    text: "Salut fermier ! Appuie sur E"
+};
+
+// ---------------- KEYS ----------------
+let keys = {};
+
+document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+// ---------------- MOVE ----------------
+function move() {
+    if (keys["w"]) player.y -= player.speed;
+    if (keys["s"]) player.y += player.speed;
+    if (keys["a"]) player.x -= player.speed;
+    if (keys["d"]) player.x += player.speed;
 }
 
-function drawMap() {
-    map.innerHTML = "";
+// ---------------- INTERACTION ----------------
+function interact() {
+    let dx = player.x - npc.x;
+    let dy = player.y - npc.y;
+    let dist = Math.sqrt(dx*dx + dy*dy);
 
-    game.tiles.forEach((t, i) => {
-        let div = document.createElement("div");
-        div.className = "tile";
-
-        if (t.type === "grange") div.textContent = "🏚️";
-        else if (t.type === "silo") div.textContent = "🏪";
-        else if (t.type === "usine") div.textContent = "🏭";
-        else if (t.crop) div.textContent = "🌾";
-        else div.textContent = "🌱";
-
-        div.onclick = () => clickTile(i);
-
-        map.appendChild(div);
-    });
-}
-
-// ---------------- TILE INTERACTION ----------------
-function clickTile(i) {
-    let t = game.tiles[i];
-
-    if (t.type === "terrain") {
-        t.crop = !t.crop;
-        if (t.crop) game.wheat += 2;
-    }
-
-    if (t.type === "usine") {
+    if (dist < 50) {
         game.money += 5;
-    }
-
-    update();
-    drawMap();
-}
-
-// ---------------- BUILDINGS ----------------
-function build(type) {
-    if (type === "grange" && game.money >= 20) {
-        game.money -= 20;
-        game.tiles[randomTile()].type = "grange";
-        game.workers += 1;
-    }
-
-    if (type === "silo" && game.money >= 30) {
-        game.money -= 30;
-        game.tiles[randomTile()].type = "silo";
-    }
-
-    if (type === "usine" && game.money >= 80) {
-        game.money -= 80;
-        game.tiles[randomTile()].type = "usine";
-    }
-
-    update();
-    drawMap();
-}
-
-function randomTile() {
-    return Math.floor(Math.random() * game.tiles.length);
-}
-
-// ---------------- CRAFT ----------------
-function craft(item) {
-    if (item === "pain" && game.wheat >= 5) {
-        game.wheat -= 5;
-        game.inventory.pain++;
-    }
-
-    if (item === "engrais" && game.wheat >= 10) {
-        game.wheat -= 10;
-        game.inventory.engrais++;
-    }
-
-    update();
-}
-
-// ---------------- AI WORKERS ----------------
-function workersAI() {
-    for (let i = 0; i < game.workers; i++) {
-        game.wheat += 1;
+        game.wheat += 2;
+        npc.text = "Merci ! +5💰 +2🌾";
+        setTimeout(() => {
+            npc.text = "Salut fermier ! Appuie sur E";
+        }, 2000);
     }
 }
 
-// ---------------- EVENTS ----------------
-function events() {
-    game.bossTimer++;
+document.addEventListener("keydown", e => {
+    if (e.key.toLowerCase() === "e") interact();
+});
 
-    // rats attack
-    if (Math.random() < 0.1) {
-        let loss = Math.floor(game.wheat * 0.2);
-        game.wheat -= loss;
-        alert("🐀 Attaque de rats ! -" + loss + " blé");
-    }
+// ---------------- DRAW ----------------
+function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    // boss event
-    if (game.bossTimer > 10) {
-        game.bossTimer = 0;
-        let reward = 100;
-        game.money += reward;
-        alert("⚔️ BOSS RAT GÉANT VAINCU ! +" + reward + "💰");
-    }
+    // ground
+    ctx.fillStyle = "#2ecc71";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // npc
+    ctx.fillStyle = "blue";
+    ctx.fillRect(npc.x, npc.y, npc.size, npc.size);
+
+    ctx.fillStyle = "white";
+    ctx.fillText(npc.text, npc.x - 40, npc.y - 10);
+
+    // player
+    ctx.fillStyle = "red";
+    ctx.fillRect(player.x, player.y, player.size, player.size);
 }
 
 // ---------------- UI ----------------
-function update() {
-    document.getElementById("stats").innerHTML =
-        `💰 Or: ${game.money} <br>
-        🌾 Blé: ${game.wheat} <br>
-        🧠 Ouvriers: ${game.workers} <br>
-        🍞 Pain: ${game.inventory.pain} <br>
-        🌱 Engrais: ${game.inventory.engrais}`;
+function updateUI() {
+    document.getElementById("money").innerText = game.money;
+    document.getElementById("wheat").innerText = game.wheat;
 }
 
 // ---------------- LOOP ----------------
-setInterval(() => {
-    workersAI();
-    events();
-    update();
-    drawMap();
-}, 2000);
+function loop() {
+    move();
+    draw();
+    updateUI();
+    requestAnimationFrame(loop);
+}
 
-// ---------------- INIT ----------------
-initMap();
-update();
-drawMap();
+loop();
 
 </script>
 
