@@ -2,13 +2,13 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Football Game ⚽</title>
+<title>Football Stadium ⚽</title>
 
 <style>
 body{
 margin:0;
 overflow:hidden;
-background:#1b5e20;
+background:black;
 }
 canvas{
 display:block;
@@ -32,19 +32,26 @@ c.height = window.innerHeight;
 resize();
 window.addEventListener("resize",resize);
 
-// ⚽ joueur
-let player = {x:100,y:200};
+// ⚽ équipe joueur
+let team = [
+{x:120,y:200},
+{x:120,y:260},
+{x:120,y:320}
+];
+
+let selected = 0; // joueur contrôlé
 
 // ⚽ ennemis
 let enemies = [
 {x:600,y:200},
-{x:650,y:350}
+{x:650,y:300},
+{x:700,y:250}
 ];
 
 // ⚽ balle
-let ball = {x:130,y:200};
+let ball = {x:150,y:200,vx:0,vy:0};
+let owner = "player"; // player ou enemy
 
-// score
 let score = 0;
 
 // clavier
@@ -52,72 +59,61 @@ let keys = {};
 document.addEventListener("keydown",e=>keys[e.code]=true);
 document.addEventListener("keyup",e=>keys[e.code]=false);
 
-// 🥅 cages
-function drawGoals(){
-
-// gauche
-ctx.fillStyle="white";
-ctx.fillRect(0,c.height/2-100,20,200);
-
-// droite
-ctx.fillStyle="white";
-ctx.fillRect(c.width-20,c.height/2-100,20,200);
-}
-
-// 👤 bonhomme
-function drawPlayer(x,y,color){
-
-// tête
-ctx.fillStyle="#ffcc80";
-ctx.beginPath();
-ctx.arc(x,y,8,0,Math.PI*2);
-ctx.fill();
-
-// corps
-ctx.fillStyle=color;
-ctx.fillRect(x-6,y+8,12,20);
-
-// jambes
-ctx.fillStyle="#222";
-ctx.fillRect(x-6,y+28,5,10);
-ctx.fillRect(x+1,y+28,5,10);
-}
+// changer joueur
+document.addEventListener("keydown",e=>{
+if(e.code==="KeyQ") selected = (selected+1)%team.length;
+});
 
 // 🎮 update
 function update(){
 
-// mouvement joueur
-if(keys["ArrowUp"]) player.y-=5;
-if(keys["ArrowDown"]) player.y+=5;
-if(keys["ArrowLeft"]) player.x-=5;
-if(keys["ArrowRight"]) player.x+=5;
+let p = team[selected];
 
-// balle suit joueur
-ball.x = player.x + 10;
-ball.y = player.y + 10;
+// mouvement joueur
+if(keys["ArrowUp"]) p.y -= 5;
+if(keys["ArrowDown"]) p.y += 5;
+if(keys["ArrowLeft"]) p.x -= 5;
+if(keys["ArrowRight"]) p.x += 5;
+
+// PASSE (Espace)
+if(keys["Space"]){
+for(let i=0;i<team.length;i++){
+if(i!==selected){
+ball.x = team[selected].x;
+ball.y = team[selected].y;
+owner = "player";
+}
+}
+}
+
+// balle suit joueur si équipe possède
+if(owner==="player"){
+ball.x += (team[selected].x - ball.x)*0.2;
+ball.y += (team[selected].y - ball.y)*0.2;
+}
 
 // ennemis suivent balle
 enemies.forEach(e=>{
-if(e.x < ball.x) e.x += 2;
-if(e.x > ball.x) e.x -= 2;
-if(e.y < ball.y) e.y += 2;
-if(e.y > ball.y) e.y -= 2;
-
-// prise balle
-if(Math.hypot(e.x-ball.x,e.y-ball.y)<15){
-ball.x = e.x;
-ball.y = e.y;
-}
+if(e.x < ball.x) e.x += 2.5;
+if(e.x > ball.x) e.x -= 2.5;
+if(e.y < ball.y) e.y += 2.5;
+if(e.y > ball.y) e.y -= 2.5;
 });
 
-// but (droite = goal)
-if(ball.x > c.width-30 && ball.y > c.height/2-100 && ball.y < c.height/2+100){
+// tir des ennemis
+if(owner==="enemy"){
+ball.x += (enemies[0].x - ball.x)*0.05;
+ball.y += (enemies[0].y - ball.y)*0.05;
+}
+
+// but droite
+if(ball.x > c.width-30){
 score++;
 reset();
 }
 
-// but (gauche)
-if(ball.x < 30 && ball.y > c.height/2-100 && ball.y < c.height/2+100){
+// but gauche
+if(ball.x < 30){
 score--;
 reset();
 }
@@ -128,33 +124,64 @@ requestAnimationFrame(update);
 
 // reset
 function reset(){
-player.x = 100;
-player.y = 200;
-ball.x = 130;
+team.forEach(p=>{p.x=120;p.y=200+Math.random()*100});
+ball.x = 150;
 ball.y = 200;
+owner="player";
 }
 
-// 🎨 draw
-function draw(){
-
-ctx.clearRect(0,0,c.width,c.height);
+// 🎨 stade
+function stadium(){
 
 // terrain
-ctx.fillStyle="#2e7d32";
+ctx.fillStyle="#1f7a2e";
 ctx.fillRect(0,0,c.width,c.height);
 
-// ligne centrale
+// lignes
 ctx.strokeStyle="white";
+ctx.lineWidth=3;
+
+// centre
 ctx.beginPath();
 ctx.moveTo(c.width/2,0);
 ctx.lineTo(c.width/2,c.height);
 ctx.stroke();
 
-// cages
-drawGoals();
+// cercle
+ctx.beginPath();
+ctx.arc(c.width/2,c.height/2,80,0,Math.PI*2);
+ctx.stroke();
 
-// joueur
-drawPlayer(player.x,player.y,"blue");
+// surface
+ctx.strokeRect(c.width-120,c.height/2-120,100,240);
+
+// tribunes (public)
+ctx.fillStyle="#444";
+ctx.fillRect(0,0,c.width,60);
+ctx.fillRect(0,c.height-60,c.width,60);
+}
+
+// 👤 joueur style
+function drawPlayer(x,y,color){
+
+ctx.fillStyle="#ffcc80";
+ctx.beginPath();
+ctx.arc(x,y,8,0,Math.PI*2);
+ctx.fill();
+
+ctx.fillStyle=color;
+ctx.fillRect(x-6,y+8,12,20);
+}
+
+// 🎮 draw
+function draw(){
+
+stadium();
+
+// équipe
+team.forEach((p,i)=>{
+drawPlayer(p.x,p.y,i===selected?"blue":"lightblue");
+});
 
 // ennemis
 enemies.forEach(e=>{
@@ -171,6 +198,9 @@ ctx.fill();
 ctx.fillStyle="white";
 ctx.font="30px Arial";
 ctx.fillText("Score: "+score,20,40);
+
+// info
+ctx.fillText("Q = changer joueur | SPACE = passe",20,80);
 }
 
 update();
