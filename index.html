@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Neon Rings Game ⚡</title>
+<title>Neon Ping Pong 🏓⚡</title>
 
 <style>
 body{
@@ -12,9 +12,7 @@ font-family:Arial;
 background:black;
 }
 
-canvas{display:block;}
-
-/* ===== MENU (NE PAS TOUCHER) ===== */
+/* ===== MENU STYLE (comme ton jeu précédent) ===== */
 #menu{
 position:absolute;
 top:0;left:0;
@@ -55,8 +53,10 @@ left:10px;
 color:white;
 z-index:5;
 display:none;
-font-size:18px;
+font-size:20px;
 }
+
+canvas{display:block;}
 </style>
 </head>
 
@@ -64,14 +64,15 @@ font-size:18px;
 
 <!-- MENU -->
 <div id="menu">
-<h1>⚡ NEON RINGS ⚡</h1>
+<h1>🏓 NEON PING PONG ⚡</h1>
 <button onclick="startGame()">START</button>
-<p>Arrow keys = move ⚪</p>
+<p>W/S = gauche | ↑/↓ = droite</p>
 </div>
 
 <!-- HUD -->
 <div id="hud">
-Score: <span id="score">0</span>
+Score Gauche: <span id="scoreL">0</span> |
+Score Droite: <span id="scoreR">0</span>
 </div>
 
 <canvas id="game"></canvas>
@@ -87,26 +88,19 @@ c.height=window.innerHeight;
 resize();
 window.addEventListener("resize",resize);
 
-// ================= GAME STATE =================
+// 🏓 paddles
+let leftPaddle,rightPaddle;
+
+// ⚪ ball
+let ball;
+
+// scores
+let scoreL=0;
+let scoreR=0;
+
 let running=false;
-let hue=0;
 
-// ⚪ PLAYER (VERT + GLOW VIOLET)
-let ball={
-x:200,
-y:200,
-r:12,
-speed:5
-};
-
-// 🔵 RINGS
-let rings=[];
-let particles=[];
-
-// 💰 SCORE
-let score=0;
-
-// INPUT
+// input
 let keys={};
 document.addEventListener("keydown",e=>keys[e.code]=true);
 document.addEventListener("keyup",e=>keys[e.code]=false);
@@ -116,38 +110,40 @@ function startGame(){
 document.getElementById("menu").style.display="none";
 document.getElementById("hud").style.display="block";
 
+init();
 running=true;
-
-score=0;
-rings=[];
-particles=[];
-
-for(let i=0;i<18;i++) spawnRing();
-
 loop();
 }
 
-// ================= SPAWN =================
-function spawnRing(){
-rings.push({
-x:Math.random()*c.width,
-y:Math.random()*c.height,
-r:40+Math.random()*25,
-color:"white"
-});
-}
+// ================= INIT =================
+function init(){
 
-// ================= EXPLOSION =================
-function explosion(x,y){
-for(let i=0;i<18;i++){
-particles.push({
-x,
-y,
-vx:(Math.random()-0.5)*6,
-vy:(Math.random()-0.5)*6,
-life:40
-});
-}
+leftPaddle={
+x:20,
+y:c.height/2-60,
+w:15,
+h:120,
+speed:7
+};
+
+rightPaddle={
+x:c.width-35,
+y:c.height/2-60,
+w:15,
+h:120,
+speed:7
+};
+
+ball={
+x:c.width/2,
+y:c.height/2,
+vx:6,
+vy:3,
+r:8
+};
+
+scoreL=0;
+scoreR=0;
 }
 
 // ================= LOOP =================
@@ -162,85 +158,97 @@ requestAnimationFrame(loop);
 // ================= UPDATE =================
 function update(){
 
-hue+=0.8;
+// move paddles
+if(keys["KeyW"]) leftPaddle.y-=leftPaddle.speed;
+if(keys["KeyS"]) leftPaddle.y+=leftPaddle.speed;
 
-// MOVE PLAYER
-if(keys["ArrowUp"]) ball.y-=ball.speed;
-if(keys["ArrowDown"]) ball.y+=ball.speed;
-if(keys["ArrowLeft"]) ball.x-=ball.speed;
-if(keys["ArrowRight"]) ball.x+=ball.speed;
+if(keys["ArrowUp"]) rightPaddle.y-=rightPaddle.speed;
+if(keys["ArrowDown"]) rightPaddle.y+=rightPaddle.speed;
 
-// LIMITS
-ball.x=Math.max(0,Math.min(c.width,ball.x));
-ball.y=Math.max(0,Math.min(c.height,ball.y));
+// limits
+leftPaddle.y=Math.max(0,Math.min(c.height-leftPaddle.h,leftPaddle.y));
+rightPaddle.y=Math.max(0,Math.min(c.height-leftPaddle.h,rightPaddle.y));
 
-// RINGS COLLISION
-for(let i=rings.length-1;i>=0;i--){
-let r=rings[i];
+// ball move
+ball.x+=ball.vx;
+ball.y+=ball.vy;
 
-let d=Math.hypot(ball.x-r.x,ball.y-r.y);
+// bounce top/bottom
+if(ball.y<0 || ball.y>c.height) ball.vy*=-1;
 
-if(d<r.r){
-
-// 💥 EFFECT
-explosion(ball.x,ball.y);
-
-score++;
-
-rings.splice(i,1);
-spawnRing();
-}
+// collision left
+if(
+ball.x-ball.r<leftPaddle.x+leftPaddle.w &&
+ball.y>leftPaddle.y &&
+ball.y<leftPaddle.y+leftPaddle.h
+){
+ball.vx*=-1;
+ball.x=leftPaddle.x+leftPaddle.w+ball.r;
 }
 
-// PARTICLES
-for(let i=particles.length-1;i>=0;i--){
-let p=particles[i];
-
-p.x+=p.vx;
-p.y+=p.vy;
-p.life--;
-
-if(p.life<=0) particles.splice(i,1);
+// collision right
+if(
+ball.x+ball.r>rightPaddle.x &&
+ball.y>rightPaddle.y &&
+ball.y<rightPaddle.y+rightPaddle.h
+){
+ball.vx*=-1;
+ball.x=rightPaddle.x-ball.r;
 }
 
-// SCORE UI
-document.getElementById("score").innerText=score;
+// score
+if(ball.x<0){
+scoreR++;
+resetBall();
+}
+
+if(ball.x>c.width){
+scoreL++;
+resetBall();
+}
+
+// UI
+document.getElementById("scoreL").innerText=scoreL;
+document.getElementById("scoreR").innerText=scoreR;
+}
+
+// ================= RESET BALL =================
+function resetBall(){
+ball.x=c.width/2;
+ball.y=c.height/2;
+ball.vx*=-1;
+ball.vy=(Math.random()-0.5)*6;
 }
 
 // ================= DRAW =================
 function draw(){
 
-// 🌈 BACKGROUND (ONLY IN GAME)
-if(running){
-ctx.fillStyle=`hsl(${hue},60%,10%)`;
+ctx.fillStyle="black";
 ctx.fillRect(0,0,c.width,c.height);
-}
 
-// 🔵 RINGS
-rings.forEach(r=>{
+// center line
 ctx.strokeStyle="white";
-ctx.lineWidth=4;
-
+ctx.setLineDash([10,10]);
 ctx.beginPath();
-ctx.arc(r.x,r.y,r.r,0,Math.PI*2);
+ctx.moveTo(c.width/2,0);
+ctx.lineTo(c.width/2,c.height);
 ctx.stroke();
-});
+ctx.setLineDash([]);
 
-// 💥 PARTICLES
-particles.forEach(p=>{
-ctx.fillStyle="rgba(255,255,255,0.7)";
-ctx.fillRect(p.x,p.y,3,3);
-});
+// paddles
+ctx.fillStyle="white";
+ctx.fillRect(leftPaddle.x,leftPaddle.y,leftPaddle.w,leftPaddle.h);
+ctx.fillRect(rightPaddle.x,rightPaddle.y,rightPaddle.w,rightPaddle.h);
 
-// ⚪ PLAYER (VERT + PURPLE GLOW)
-ctx.shadowBlur=25;
-ctx.shadowColor="purple";
-
-ctx.fillStyle="#00ff88";
+// ball
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
 ctx.fill();
 
+// glow effect
+ctx.shadowBlur=15;
+ctx.shadowColor="cyan";
+ctx.fill();
 ctx.shadowBlur=0;
 }
 
