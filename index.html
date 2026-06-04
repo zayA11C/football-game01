@@ -2,216 +2,130 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Farm RPG</title>
-
+<title>3rd Person Game</title>
 <style>
-body {
-    margin:0;
-    overflow:hidden;
-    background:#111;
-}
-canvas {
-    display:block;
-}
+body { margin:0; overflow:hidden; }
 #ui{
-    position:absolute;
-    top:10px;
-    left:10px;
-    color:white;
-    font-family:Arial;
-    background:rgba(0,0,0,0.5);
-    padding:10px;
-    border-radius:8px;
+  position:absolute;
+  top:10px;
+  left:10px;
+  color:white;
+  font-family:Arial;
+  background:rgba(0,0,0,0.5);
+  padding:10px;
 }
 </style>
 </head>
-
 <body>
 
 <div id="ui">
-💰 <span id="money"></span> |
-🌾 <span id="wheat"></span> |
-🎒 <span id="seeds"></span><br>
-E = parler | F = farm | SPACE = attaquer
+🎮 GTA-LIKE TEST<br>
+WASD = bouger | Souris = caméra
 </div>
 
-<canvas id="c"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
 <script>
-// ================= CANVAS =================
-const c = document.getElementById("c");
-const ctx = c.getContext("2d");
-c.width = window.innerWidth;
-c.height = window.innerHeight;
+// ================= SCENE =================
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
 
-// ================= WORLD =================
-const TS = 40;
-const W = 30;
-const H = 20;
-
-// 0 sol / 1 mur / 2 champ
-let map = Array.from({length:H}, (_,y)=>
-    Array.from({length:W}, (_,x)=>
-        (x===0||y===0||x===W-1||y===H-1)?1:0
-    )
+// ================= CAMERA =================
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth/window.innerHeight,
+  0.1,
+  1000
 );
 
-// champ initial
-map[8][8] = 2;
+// ================= RENDERER =================
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// ================= LIGHT =================
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(5,10,5);
+scene.add(light);
+
+// ================= GROUND =================
+const groundGeo = new THREE.PlaneGeometry(200,200);
+const groundMat = new THREE.MeshBasicMaterial({color:0x2ecc71});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
 
 // ================= PLAYER =================
-let p = {x:3,y:3};
-
-// ================= NPC =================
-let npc = {x:10,y:7,text:"Salut fermier !"};
-
-// ================= ENEMY =================
-let enemy = {x:18,y:12,hp:3};
-
-// ================= GAME =================
-let game = {
-    money:10,
-    wheat:0,
-    seeds:3
-};
+const playerGeo = new THREE.BoxGeometry(1,2,1);
+const playerMat = new THREE.MeshBasicMaterial({color:0xff0000});
+const player = new THREE.Mesh(playerGeo, playerMat);
+player.position.y = 1;
+scene.add(player);
 
 // ================= INPUT =================
 let keys = {};
-addEventListener("keydown", e=>keys[e.key.toLowerCase()]=true);
-addEventListener("keyup", e=>keys[e.key.toLowerCase()]=false);
+document.addEventListener("keydown", e=>keys[e.key.toLowerCase()]=true);
+document.addEventListener("keyup", e=>keys[e.key.toLowerCase()]=false);
 
-// ================= COLLISION =================
-function solid(x,y){
-    return map[y] && map[y][x] === 1;
-}
+// ================= CAMERA CONTROL =================
+let camAngle = 0;
+
+// souris rotation
+document.addEventListener("mousemove", (e)=>{
+  camAngle += e.movementX * 0.002;
+});
 
 // ================= MOVE =================
 function move(){
-    let nx = p.x;
-    let ny = p.y;
+  let speed = 0.15;
 
-    if(keys["w"]) ny -= 0.08;
-    if(keys["s"]) ny += 0.08;
-    if(keys["a"]) nx -= 0.08;
-    if(keys["d"]) nx += 0.08;
+  let forwardX = Math.sin(camAngle);
+  let forwardZ = Math.cos(camAngle);
 
-    if(!solid(Math.floor(nx),Math.floor(p.y))) p.x = nx;
-    if(!solid(Math.floor(p.x),Math.floor(ny))) p.y = ny;
+  let rightX = Math.sin(camAngle + Math.PI/2);
+  let rightZ = Math.cos(camAngle + Math.PI/2);
+
+  if(keys["w"]){
+    player.position.x += forwardX * speed;
+    player.position.z += forwardZ * speed;
+  }
+  if(keys["s"]){
+    player.position.x -= forwardX * speed;
+    player.position.z -= forwardZ * speed;
+  }
+  if(keys["a"]){
+    player.position.x -= rightX * speed;
+    player.position.z -= rightZ * speed;
+  }
+  if(keys["d"]){
+    player.position.x += rightX * speed;
+    player.position.z += rightZ * speed;
+  }
 }
 
-// ================= FARM =================
-function farm(){
-    let x = Math.floor(p.x);
-    let y = Math.floor(p.y);
+// ================= CAMERA FOLLOW =================
+function updateCamera(){
+  let distance = 6;
+  let height = 3;
 
-    if(map[y][x] === 2){
-        game.wheat++;
-        map[y][x] = 0;
-    } else if(game.seeds > 0){
-        map[y][x] = 2;
-        game.seeds--;
-    }
-}
+  camera.position.x = player.position.x - Math.sin(camAngle) * distance;
+  camera.position.z = player.position.z - Math.cos(camAngle) * distance;
+  camera.position.y = player.position.y + height;
 
-// ================= INTERACT =================
-function interact(){
-    let dx = Math.abs(p.x-npc.x);
-    let dy = Math.abs(p.y-npc.y);
-
-    if(dx+dy<2){
-        game.money += 5;
-        game.seeds += 2;
-        npc.text = "Merci ! +5💰 +2 graines";
-        setTimeout(()=>npc.text="Salut fermier !",1500);
-    }
-}
-
-// ================= FIGHT =================
-function fight(){
-    let dx = Math.abs(p.x-enemy.x);
-    let dy = Math.abs(p.y-enemy.y);
-
-    if(dx+dy<2){
-        enemy.hp--;
-        if(enemy.hp<=0){
-            game.money += 20;
-            enemy.x = -999;
-        }
-    }
-}
-
-// ================= INPUT ACTIONS =================
-addEventListener("keydown", e=>{
-    if(e.key.toLowerCase()==="e") interact();
-    if(e.key.toLowerCase()==="f") farm();
-    if(e.key===" ") fight();
-});
-
-// ================= DRAW =================
-function draw(){
-    ctx.clearRect(0,0,c.width,c.height);
-
-    let camX = p.x*TS - c.width/2;
-    let camY = p.y*TS - c.height/2;
-
-    for(let y=0;y<H;y++){
-        for(let x=0;x<W;x++){
-            let t = map[y][x];
-
-            ctx.fillStyle =
-                t===0 ? "#2ecc71" :
-                t===1 ? "#7f8c8d" :
-                "#f1c40f";
-
-            ctx.fillRect(x*TS-camX,y*TS-camY,TS,TS);
-        }
-    }
-
-    // NPC
-    ctx.fillStyle="blue";
-    ctx.fillRect(npc.x*TS-camX,npc.y*TS-camY,20,20);
-
-    ctx.fillStyle="white";
-    ctx.fillText(npc.text,npc.x*TS-camX,npc.y*TS-camY-5);
-
-    // Enemy
-    ctx.fillStyle="red";
-    ctx.fillRect(enemy.x*TS-camX,enemy.y*TS-camY,20,20);
-
-    // Player
-    ctx.fillStyle="white";
-    ctx.fillRect(p.x*TS-camX,p.y*TS-camY,20,20);
-}
-
-// ================= UI =================
-function ui(){
-    document.getElementById("money").textContent = game.money;
-    document.getElementById("wheat").textContent = game.wheat;
-    document.getElementById("seeds").textContent = game.seeds;
-}
-
-// ================= SAVE =================
-function save(){
-    localStorage.setItem("farmrpg",JSON.stringify(game));
-}
-function load(){
-    let d = localStorage.getItem("farmrpg");
-    if(d) game = JSON.parse(d);
+  camera.lookAt(player.position);
 }
 
 // ================= LOOP =================
-function loop(){
-    move();
-    draw();
-    ui();
-    save();
-    requestAnimationFrame(loop);
+function animate(){
+  requestAnimationFrame(animate);
+
+  move();
+  updateCamera();
+
+  renderer.render(scene,camera);
 }
 
-load();
-loop();
-
+animate();
 </script>
 
 </body>
