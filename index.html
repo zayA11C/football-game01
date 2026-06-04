@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Ping Pong Neon AI</title>
+<title>NEON PONG GOD MODE</title>
 
 <style>
 body{
@@ -10,6 +10,7 @@ margin:0;
 overflow:hidden;
 font-family:Arial;
 background:black;
+touch-action:none;
 }
 
 /* ===== MENU ===== */
@@ -20,75 +21,87 @@ display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
-z-index:10;
+background:linear-gradient(45deg,#000,#111,#220033,#00ffff,#ff00ff);
+background-size:400% 400%;
+animation:bg 6s infinite alternate;
 color:white;
-background:linear-gradient(45deg,#000,#111,#222);
+z-index:10;
 }
 
-#menu h1{
-font-size:40px;
-margin-bottom:20px;
+@keyframes bg{
+0%{background-position:0% 50%}
+100%{background-position:100% 50%}
 }
 
 button{
-padding:12px 20px;
-font-size:18px;
+padding:12px 18px;
+margin-top:10px;
 border:none;
 border-radius:10px;
 cursor:pointer;
 background:#00ffcc;
+font-weight:bold;
+}
+
+select{
+padding:10px;
+border-radius:10px;
 margin-top:10px;
 }
 
-/* ===== HUD ===== */
+/* HUD */
 #hud{
 position:absolute;
 top:10px;
 left:10px;
 color:white;
-font-size:20px;
 z-index:5;
 display:none;
 }
 
-/* ===== SCOREBOARD FIN ===== */
-#scoreBoard{
+/* mobile controls */
+#controls{
 position:absolute;
-inset:0;
+bottom:20px;
+width:100%;
 display:none;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-color:white;
-background:rgba(0,0,0,0.85);
-z-index:20;
+justify-content:space-between;
+z-index:5;
 }
 
-#scoreBoard h2{
-font-size:40px;
+.pad{
+width:45%;
+height:120px;
+background:rgba(255,255,255,0.05);
 }
 
+/* canvas */
 canvas{display:block;}
 </style>
 </head>
 
 <body>
 
-<!-- MENU -->
 <div id="menu">
-<h1>🏓 NEON PING PONG</h1>
-<button onclick="startGame()">JOUER</button>
+<h1>🏓 NEON PONG GOD MODE</h1>
+
+<select id="mode">
+<option value="arcade">🎮 Arcade</option>
+<option value="pro">🔥 Pro</option>
+<option value="chaos">🌀 Chaos+</option>
+<option value="impossible">🧠 Impossible AI</option>
+</select>
+
+<button onclick="start()">START</button>
 </div>
 
-<!-- HUD -->
 <div id="hud">
-Score : <span id="sL">0</span> - <span id="sR">0</span>
+Score: <span id="l">0</span> - <span id="r">0</span>
 </div>
 
-<!-- SCOREBOARD -->
-<div id="scoreBoard">
-<h2 id="result"></h2>
-<button onclick="restart()">Rejouer</button>
+<div id="controls">
+<div class="pad" id="leftPad"></div>
+<div class="pad" id="rightPad"></div>
 </div>
 
 <canvas id="c"></canvas>
@@ -104,20 +117,31 @@ c.height=innerHeight;
 resize();
 addEventListener("resize",resize);
 
-// ===== GAME STATE =====
-let left,right,ball;
-let scoreL=0, scoreR=0;
+// ===== GAME =====
+let left,right,ball,particles=[],holes=[];
+let scoreL=0,scoreR=0;
 let running=false;
+let mode="arcade";
 
-// ===== INPUT =====
+let shake=0;
 let keys={};
+
 addEventListener("keydown",e=>keys[e.code]=true);
 addEventListener("keyup",e=>keys[e.code]=false);
 
-// ===== MENU =====
-function startGame(){
+// mobile touch
+let touchY=0;
+document.getElementById("leftPad").addEventListener("touchmove",e=>{
+touchY=e.touches[0].clientY;
+});
+
+// ===== START =====
+function start(){
+mode=document.getElementById("mode").value;
+
 document.getElementById("menu").style.display="none";
 document.getElementById("hud").style.display="block";
+document.getElementById("controls").style.display="flex";
 
 init();
 running=true;
@@ -127,26 +151,78 @@ loop();
 // ===== INIT =====
 function init(){
 left={x:20,y:c.height/2-70,w:15,h:140,s:8};
-right={x:c.width-35,y:c.height/2-70,w:15,h:140,s:7};
+right={x:c.width-35,y:c.height/2-70,w:15,h:140,s:8};
 
 ball={x:c.width/2,y:c.height/2,vx:7,vy:3,r:8};
 
-scoreL=0;
-scoreR=0;
-updateHUD();
+scoreL=0;scoreR=0;
+
+// trous noirs
+holes=[];
+for(let i=0;i<(mode==="chaos"?3:1);i++){
+holes.push({
+x:Math.random()*c.width,
+y:Math.random()*c.height,
+r:60+Math.random()*60
+});
+}
 }
 
-// ===== IA =====
+// ===== EXPLOSION =====
+function boom(x,y){
+for(let i=0;i<25;i++){
+particles.push({
+x,y,
+vx:(Math.random()-0.5)*8,
+vy:(Math.random()-0.5)*8,
+life:40,
+hue:Math.random()*360
+});
+}
+shake=15;
+}
+
+// ===== IA GOD =====
 function ai(){
-let target = ball.y - right.h/2;
-right.y += (target - right.y)*0.12;
-right.y=Math.max(0,Math.min(c.height-right.h,right.y));
+
+if(mode!=="impossible" && mode!=="pro") return;
+
+// prédiction ultra avancée
+let px=ball.x;
+let py=ball.y;
+let vx=ball.vx;
+let vy=ball.vy;
+
+for(let i=0;i<25;i++){
+px+=vx;
+py+=vy;
+
+// rebonds prédits
+if(py<0||py>c.height) vy*=-1;
+
+// trous noirs perturbent IA
+for(let h of holes){
+let dx=h.x-px;
+let dy=h.y-py;
+let d=Math.sqrt(dx*dx+dy*dy);
+
+if(d<h.r){
+vy+=dy*0.02;
+}
+}
+}
+
+let target=py-right.h/2;
+
+// difficulté impossible = parfait suivi
+let speed = mode==="impossible"?0.28:0.18;
+
+right.y += (target-right.y)*speed;
 }
 
 // ===== LOOP =====
 function loop(){
 if(!running) return;
-
 update();
 draw();
 requestAnimationFrame(loop);
@@ -155,55 +231,74 @@ requestAnimationFrame(loop);
 // ===== UPDATE =====
 function update(){
 
-// PLAYER
+// LEFT (player or touch)
 if(keys["KeyW"]) left.y-=left.s;
 if(keys["KeyS"]) left.y+=left.s;
-left.y=Math.max(0,Math.min(c.height-left.h,left.y));
+
+// mobile
+if(touchY) left.y += (touchY-left.y)*0.2;
 
 // IA
 ai();
 
-// BALL
+// clamp
+left.y=Math.max(0,Math.min(c.height-left.h,left.y));
+right.y=Math.max(0,Math.min(c.height-right.h,right.y));
+
+// GRAVITY / CHAOS
+if(mode==="chaos"||mode==="impossible"){
+ball.vy += 0.15;
+ball.vx += (Math.random()-0.5)*0.2;
+}
+
+// holes attraction
+for(let h of holes){
+let dx=h.x-ball.x;
+let dy=h.y-ball.y;
+let d=Math.sqrt(dx*dx+dy*dy);
+
+if(d<h.r){
+ball.vx+=dx*0.02;
+ball.vy+=dy*0.02;
+}
+}
+
+// ball
 ball.x+=ball.vx;
 ball.y+=ball.vy;
 
-// WALL
-if(ball.y<0||ball.y>c.height) ball.vy*=-1;
-
-// COLLISION LEFT
-if(ball.x-ball.r<left.x+left.w &&
-ball.y>left.y && ball.y<left.y+left.h){
-ball.vx*=-1;
-ball.x=left.x+left.w+ball.r;
+// walls
+if(ball.y<0||ball.y>c.height){
+ball.vy*=-1;
+boom(ball.x,ball.y);
 }
 
-// COLLISION RIGHT
-if(ball.x+ball.r>right.x &&
-ball.y>right.y && ball.y<right.y+right.h){
+// collisions
+if(ball.x<left.x+left.w && ball.y>left.y && ball.y<left.y+left.h){
 ball.vx*=-1;
-ball.x=right.x-ball.r;
+boom(ball.x,ball.y);
 }
 
-// SCORE
+if(ball.x>right.x && ball.y>right.y && ball.y<right.y+right.h){
+ball.vx*=-1;
+boom(ball.x,ball.y);
+}
+
+// score
 if(ball.x<0){
-scoreR++;
-reset();
+scoreR++;reset();
 }
 
 if(ball.x>c.width){
-scoreL++;
-reset();
+scoreL++;reset();
 }
 
-updateHUD();
-
-// WIN
-if(scoreL>=5 || scoreR>=5){
-endGame();
-}
+// update UI
+document.getElementById("l").textContent=scoreL;
+document.getElementById("r").textContent=scoreR;
 }
 
-// ===== RESET BALL =====
+// ===== RESET =====
 function reset(){
 ball.x=c.width/2;
 ball.y=c.height/2;
@@ -211,56 +306,41 @@ ball.vx=(Math.random()>0.5?7:-7);
 ball.vy=(Math.random()-0.5)*6;
 }
 
-// ===== HUD =====
-function updateHUD(){
-document.getElementById("sL").textContent=scoreL;
-document.getElementById("sR").textContent=scoreR;
-}
-
-// ===== END GAME =====
-function endGame(){
-running=false;
-
-document.getElementById("scoreBoard").style.display="flex";
-
-document.getElementById("result").textContent =
-(scoreL>scoreR) ? "🏆 TU GAGNES !" : "🤖 IA GAGNE !";
-}
-
-// ===== RESTART =====
-function restart(){
-document.getElementById("scoreBoard").style.display="none";
-init();
-running=true;
-loop();
-}
-
-// ===== DRAW (FOND ANIMÉ) =====
+// ===== DRAW =====
 let hue=0;
 
 function draw(){
 
-hue+=2;
+hue+=3;
 
-// fond animé couleur
+// screen shake
+let sx=(Math.random()-0.5)*shake;
+let sy=(Math.random()-0.5)*shake;
+shake*=0.9;
+
+ctx.setTransform(1,0,0,1,sx,sy);
+
+// background
 ctx.fillStyle=`hsl(${hue},80%,10%)`;
-ctx.fillRect(0,0,c.width,c.height);
+ctx.fillRect(-sx,-sy,c.width,c.height);
 
-// ligne centrale
-ctx.strokeStyle="white";
-ctx.setLineDash([10,10]);
+// holes
+for(let h of holes){
 ctx.beginPath();
-ctx.moveTo(c.width/2,0);
-ctx.lineTo(c.width/2,c.height);
+ctx.fillStyle="black";
+ctx.arc(h.x,h.y,h.r,0,Math.PI*2);
+ctx.fill();
+
+ctx.strokeStyle="purple";
 ctx.stroke();
-ctx.setLineDash([]);
+}
 
 // paddles
 ctx.fillStyle="white";
 ctx.fillRect(left.x,left.y,left.w,left.h);
 ctx.fillRect(right.x,right.y,right.w,right.h);
 
-// balle glow
+// ball glow
 ctx.shadowBlur=20;
 ctx.shadowColor="cyan";
 
@@ -268,9 +348,20 @@ ctx.beginPath();
 ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
 ctx.fill();
 
+// particles RGB
 ctx.shadowBlur=0;
+for(let p of particles){
+p.x+=p.vx;
+p.y+=p.vy;
+p.life--;
+
+ctx.fillStyle=`hsl(${p.hue},100%,60%)`;
+ctx.fillRect(p.x,p.y,3,3);
 }
 
+particles=particles.filter(p=>p.life>0);
+}
 </script>
+
 </body>
 </html>
