@@ -2,16 +2,19 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Football Game PRO ⚽</title>
+<title>Boat Taxi 🚤</title>
 
 <style>
 body{
 margin:0;
 overflow:hidden;
-background:black;
+background:#0b3d91;
 font-family:Arial;
 }
-canvas{display:block;}
+
+canvas{
+display:block;
+}
 </style>
 </head>
 
@@ -23,7 +26,6 @@ canvas{display:block;}
 const c=document.getElementById("game");
 const ctx=c.getContext("2d");
 
-// fullscreen
 function resize(){
 c.width=window.innerWidth;
 c.height=window.innerHeight;
@@ -31,27 +33,27 @@ c.height=window.innerHeight;
 resize();
 window.addEventListener("resize",resize);
 
-// ⚽ équipe
-let team=[
-{x:120,y:200},
-{x:120,y:260},
-{x:120,y:320}
-];
+// 🚤 bateau joueur
+let boat={
+x:200,
+y:200,
+speed:4
+};
 
-let selected=0;
+// 👤 client
+let client={
+x:500,
+y:300,
+taken:false
+};
 
-// 🤖 ennemis
-let enemies=[
-{x:600,y:200},
-{x:650,y:300},
-{x:700,y:250}
-];
+// 🎯 destination
+let dest={
+x:800,
+y:200
+};
 
-// ⚽ balle
-let ball={x:150,y:200,vx:0,vy:0};
-let owner="player";
-
-// score
+// 💰 score
 let score=0;
 
 // clavier
@@ -59,83 +61,29 @@ let keys={};
 document.addEventListener("keydown",e=>keys[e.code]=true);
 document.addEventListener("keyup",e=>keys[e.code]=false);
 
-// changer joueur + tir
-document.addEventListener("keydown",e=>{
-
-if(e.code==="KeyQ"){
-selected=(selected+1)%team.length;
-}
-
-// ⚽ TIR
-if(e.code==="Space" && owner==="player"){
-let p=team[selected];
-
-ball.x=p.x;
-ball.y=p.y;
-
-ball.vx=10;
-ball.vy=(Math.random()-0.5)*4;
-
-owner="ball";
-}
-
-});
-
 // 🎮 update
 function update(){
 
-let p=team[selected];
+// mouvement bateau
+if(keys["ArrowUp"]) boat.y-=boat.speed;
+if(keys["ArrowDown"]) boat.y+=boat.speed;
+if(keys["ArrowLeft"]) boat.x-=boat.speed;
+if(keys["ArrowRight"]) boat.x+=boat.speed;
 
-// mouvement joueur
-if(keys["ArrowUp"]) p.y-=5;
-if(keys["ArrowDown"]) p.y+=5;
-if(keys["ArrowLeft"]) p.x-=5;
-if(keys["ArrowRight"]) p.x+=5;
-
-// balle suit joueur si possession
-if(owner==="player"){
-ball.x += (p.x-ball.x)*0.2;
-ball.y += (p.y-ball.y)*0.2;
+// prendre client
+if(!client.taken && dist(boat,client)<30){
+client.taken=true;
 }
 
-// balle physique
-if(owner==="ball"){
-ball.x+=ball.vx;
-ball.y+=ball.vy;
-
-ball.vx*=0.98;
-ball.vy*=0.98;
+// transporter client vers destination
+if(client.taken){
+client.x = boat.x;
+client.y = boat.y;
 }
 
-// ennemis IA
-enemies.forEach(e=>{
-let dx=ball.x-e.x;
-let dy=ball.y-e.y;
-
-e.x+=dx*0.02;
-e.y+=dy*0.02;
-
-// prise balle
-if(Math.hypot(e.x-ball.x,e.y-ball.y)<15){
-owner="enemy";
-}
-});
-
-// ennemis shoot vers gauche
-if(owner==="enemy"){
-ball.x+= (100-ball.x)*0.05;
-ball.y+= (200-ball.y)*0.05;
-}
-
-// but droit
-if(ball.x>c.width-30){
+// livrer client
+if(client.taken && dist(boat,dest)<40){
 score++;
-reset();
-}
-
-// but gauche
-if(ball.x<30){
-score--;
 reset();
 }
 
@@ -143,83 +91,65 @@ draw();
 requestAnimationFrame(update);
 }
 
-// reset
+// 🔁 reset
 function reset(){
-team.forEach(p=>{
-p.x=120;
-p.y=200+Math.random()*100;
-});
-ball.x=150;
-ball.y=200;
-ball.vx=0;
-ball.vy=0;
-owner="player";
+
+boat.x=200;
+boat.y=200;
+
+client.x=Math.random()*c.width;
+client.y=Math.random()*c.height;
+client.taken=false;
+
+dest.x=Math.random()*c.width;
+dest.y=Math.random()*c.height;
 }
 
-// 🏟️ stade
-function field(){
+// 📏 distance
+function dist(a,b){
+return Math.hypot(a.x-b.x,a.y-b.y);
+}
 
-ctx.fillStyle="#1f7a2e";
+// 🌊 map
+function map(){
+
+// eau
+ctx.fillStyle="#1e88e5";
 ctx.fillRect(0,0,c.width,c.height);
 
-// ligne centre
-ctx.strokeStyle="white";
+// île client
+ctx.fillStyle="yellow";
 ctx.beginPath();
-ctx.moveTo(c.width/2,0);
-ctx.lineTo(c.width/2,c.height);
-ctx.stroke();
-
-// cercle
-ctx.beginPath();
-ctx.arc(c.width/2,c.height/2,80,0,Math.PI*2);
-ctx.stroke();
-
-// cages
-ctx.strokeRect(c.width-120,c.height/2-120,100,240);
-ctx.strokeRect(20,c.height/2-120,100,240);
-}
-
-// 👤 joueur
-function drawPlayer(x,y,color){
-
-ctx.fillStyle="#ffcc80";
-ctx.beginPath();
-ctx.arc(x,y,8,0,Math.PI*2);
+ctx.arc(client.x,client.y,10,0,Math.PI*2);
 ctx.fill();
 
-ctx.fillStyle=color;
-ctx.fillRect(x-6,y+8,12,20);
+// île destination
+ctx.fillStyle="lime";
+ctx.beginPath();
+ctx.arc(dest.x,dest.y,15,0,Math.PI*2);
+ctx.fill();
+}
+
+// 🚤 bateau
+function drawBoat(){
+
+ctx.fillStyle="white";
+ctx.fillRect(boat.x,boat.y,20,20);
 }
 
 // 🎨 draw
 function draw(){
 
-field();
+map();
+drawBoat();
 
-// équipe
-team.forEach((p,i)=>{
-drawPlayer(p.x,p.y,i===selected?"blue":"lightblue");
-});
-
-// ennemis
-enemies.forEach(e=>{
-drawPlayer(e.x,e.y,"red");
-});
-
-// balle
+// UI
 ctx.fillStyle="white";
-ctx.beginPath();
-ctx.arc(ball.x,ball.y,6,0,Math.PI*2);
-ctx.fill();
-
-// score
-ctx.fillStyle="white";
-ctx.font="30px Arial";
+ctx.font="24px Arial";
 ctx.fillText("Score: "+score,20,40);
 
-// commandes
-ctx.font="18px Arial";
-ctx.fillText("Arrow = move | Q = switch | SPACE = shoot",20,80);
+ctx.font="16px Arial";
+ctx.fillText("Arrow keys = move | pick client (yellow) → deliver (green)",20,70);
 }
 
 update();
