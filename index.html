@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Interactive Rings ⚪🌈</title>
+<title>ADDICTIVE RINGS ⚪🔥</title>
 
 <style>
 body{
@@ -29,10 +29,10 @@ c.height=window.innerHeight;
 resize();
 window.addEventListener("resize",resize);
 
-// 🌈 fond dynamique
+// 🌈 fond
 let hue=0;
 
-// ⚪ balle contrôlée
+// ⚪ balle
 let ball={
 x:200,
 y:200,
@@ -47,72 +47,97 @@ document.addEventListener("keyup",e=>keys[e.code]=false);
 
 // 🔵 cercles
 let rings=[];
-for(let i=0;i<6;i++) spawnRing();
+for(let i=0;i<5;i++) spawnRing();
 
+// 💰 score + combo
+let score=0;
+let combo=1;
+let lastHitTime=0;
+
+// 🔥 vitesse globale
+let gameSpeed=1;
+
+// 🎯 spawn cercle
 function spawnRing(){
 rings.push({
 x:Math.random()*c.width,
 y:Math.random()*c.height,
 r:50,
-color:"white"
+color:"white",
+life:3000+Math.random()*2000
 });
 }
 
-// 💰 score
-let score=0;
+// 🌈 couleur
+function randomColor(){
+return `hsl(${Math.random()*360},100%,60%)`;
+}
 
 // 🎮 update
 function update(){
 
-// 🌈 fond change couleur
-hue+=0.5;
+hue+=1;
 if(hue>360) hue=0;
 
-// move balle (INTERACTIF)
-if(keys["ArrowUp"]) ball.y-=ball.speed;
-if(keys["ArrowDown"]) ball.y+=ball.speed;
-if(keys["ArrowLeft"]) ball.x-=ball.speed;
-if(keys["ArrowRight"]) ball.x+=ball.speed;
+// move
+if(keys["ArrowUp"]) ball.y-=ball.speed*gameSpeed;
+if(keys["ArrowDown"]) ball.y+=ball.speed*gameSpeed;
+if(keys["ArrowLeft"]) ball.x-=ball.speed*gameSpeed;
+if(keys["ArrowRight"]) ball.x+=ball.speed*gameSpeed;
 
-// limiter écran
+// limites
 ball.x=Math.max(0,Math.min(c.width,ball.x));
 ball.y=Math.max(0,Math.min(c.height,ball.y));
 
-// collision cercles
-rings.forEach(r=>{
+// ⏱ combo reset
+if(Date.now()-lastHitTime>1200){
+combo=1;
+}
+
+// 🔵 cercles
+rings.forEach((r,i)=>{
+
+r.life-=16;
 
 let d=Math.hypot(ball.x-r.x,ball.y-r.y);
 
 if(d<r.r){
+
+// HIT 🔥
 r.color=randomColor();
-score++;
+score+=combo;
+combo++;
+
+lastHitTime=Date.now();
+
+// accélération progressive
+gameSpeed+=0.03;
 
 // nouveau cercle
-setTimeout(()=>{
-rings.splice(rings.indexOf(r),1);
+rings.splice(i,1);
 spawnRing();
-},200);
+
+// effet satisfaction (flash)
+document.body.style.background=`hsl(${hue},50%,8%)`;
 }
 
+if(r.life<=0){
+rings.splice(i,1);
+spawnRing();
+}
 });
 
 draw();
 requestAnimationFrame(update);
 }
 
-// 🌈 couleur random
-function randomColor(){
-return `hsl(${Math.random()*360},100%,60%)`;
-}
-
 // 🎨 DRAW
 function draw(){
 
-// 🌈 fond animé
 ctx.fillStyle=`hsl(${hue},60%,10%)`;
 ctx.fillRect(0,0,c.width,c.height);
 
-// 🔵 cercles
+// cercles
 rings.forEach(r=>{
 ctx.strokeStyle=r.color;
 ctx.lineWidth=5;
@@ -120,22 +145,32 @@ ctx.lineWidth=5;
 ctx.beginPath();
 ctx.arc(r.x,r.y,r.r,0,Math.PI*2);
 ctx.stroke();
+
+// timer visuel
+ctx.strokeStyle="rgba(255,255,255,0.2)";
+ctx.beginPath();
+ctx.arc(r.x,r.y,r.r+5,0,Math.PI*2);
+ctx.stroke();
 });
 
-// ⚪ balle
+// balle
 ctx.fillStyle="white";
 ctx.beginPath();
 ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
 ctx.fill();
 
-// 💰 score
+// UI
 ctx.fillStyle="white";
-ctx.font="30px Arial";
+ctx.font="28px Arial";
 ctx.fillText("Score: "+score,20,40);
 
-// instructions
+ctx.font="22px Arial";
+ctx.fillText("Combo x"+combo,20,70);
+
 ctx.font="16px Arial";
-ctx.fillText("Arrow keys = move | traverse rings ⚪🌈",20,70);
+ctx.fillText("Speed: "+gameSpeed.toFixed(2),20,100);
+
+ctx.fillText("Arrow keys = move ⚪🔥",20,130);
 }
 
 update();
