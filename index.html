@@ -1,17 +1,19 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Football FIX ⚽</title>
+<title>Football Game ⚽</title>
 
 <style>
-body{
-margin:0;
-overflow:hidden;
-background:#1b5e20;
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #1b5e20;
+  font-family: Arial;
 }
-canvas{
-display:block;
+
+canvas {
+  display: block;
 }
 </style>
 </head>
@@ -24,62 +26,120 @@ display:block;
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// plein écran SAFE
+// plein écran
 function resize(){
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 }
 resize();
 window.addEventListener("resize", resize);
 
 // joueur
-let player = {x:100,y:100};
+let player = {x:100, y:100, speed:5};
 
 // balle
-let ball = {x:140,y:100};
+let ball = {x:130, y:100};
+let owned = true;
 
-// input
+// ennemis
+let enemies = [
+  {x:500,y:200},
+  {x:600,y:300}
+];
+
+// but
+let goalX = 50;
+
+// score
+let score = 0;
+
+// clavier
 let keys = {};
-document.addEventListener("keydown",e=>keys[e.code]=true);
-document.addEventListener("keyup",e=>keys[e.code]=false);
+document.addEventListener("keydown", e => keys[e.code] = true);
+document.addEventListener("keyup", e => keys[e.code] = false);
 
 function update(){
 
-// move
-if(keys["ArrowUp"]) player.y-=5;
-if(keys["ArrowDown"]) player.y+=5;
-if(keys["ArrowLeft"]) player.x-=5;
-if(keys["ArrowRight"]) player.x+=5;
+  // mouvement joueur
+  if(keys["ArrowUp"]) player.y -= player.speed;
+  if(keys["ArrowDown"]) player.y += player.speed;
+  if(keys["ArrowLeft"]) player.x -= player.speed;
+  if(keys["ArrowRight"]) player.x += player.speed;
 
-// balle suit joueur
-ball.x = player.x + 20;
-ball.y = player.y + 20;
+  // tir
+  if(keys["Space"] && owned){
+    owned = false;
+  }
 
-draw();
-requestAnimationFrame(update);
+  // balle suit joueur
+  if(owned){
+    ball.x = player.x + 10;
+    ball.y = player.y;
+  }
+
+  // ennemis suivent balle
+  enemies.forEach(e=>{
+    if(e.x < ball.x) e.x += 2;
+    if(e.x > ball.x) e.x -= 2;
+    if(e.y < ball.y) e.y += 2;
+    if(e.y > ball.y) e.y -= 2;
+
+    // vol balle
+    if(Math.abs(e.x-ball.x)<15 && Math.abs(e.y-ball.y)<15){
+      owned = false;
+    }
+  });
+
+  // but simple
+  if(ball.x < goalX){
+    score++;
+    reset();
+  }
+
+  draw();
+  requestAnimationFrame(update);
+}
+
+function reset(){
+  player.x = 100;
+  player.y = 100;
+  ball.x = 130;
+  ball.y = 100;
+  owned = true;
 }
 
 function draw(){
-ctx.clearRect(0,0,canvas.width,canvas.height);
 
-// terrain
-ctx.fillStyle="#2e7d32";
-ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-// joueur
-ctx.fillStyle="blue";
-ctx.fillRect(player.x,player.y,30,30);
+  // terrain
+  ctx.fillStyle = "#2e7d32";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
 
-// balle
-ctx.fillStyle="white";
-ctx.beginPath();
-ctx.arc(ball.x,ball.y,6,0,Math.PI*2);
-ctx.fill();
+  // but (gauche)
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, canvas.height/2-80, 10, 160);
 
-// texte TEST
-ctx.fillStyle="white";
-ctx.font="30px Arial";
-ctx.fillText("SI TU VOIS CA => CA MARCHE ⚽",50,50);
+  // joueur
+  ctx.fillStyle = "blue";
+  ctx.fillRect(player.x, player.y, 20, 20);
+
+  // ennemis
+  ctx.fillStyle = "red";
+  enemies.forEach(e=>{
+    ctx.fillRect(e.x,e.y,20,20);
+  });
+
+  // balle
+  ctx.fillStyle = "white";
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, 6, 0, Math.PI*2);
+  ctx.fill();
+
+  // score
+  ctx.fillStyle = "white";
+  ctx.font = "30px Arial";
+  ctx.fillText("Score: " + score, 20, 40);
 }
 
 update();
