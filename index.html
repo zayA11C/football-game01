@@ -2,98 +2,139 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Football Game ⚽</title>
+<title>Football Simple ⚽</title>
+
 <style>
-body { margin:0; overflow:hidden; background:#1b5e20; }
-canvas { display:block; }
+body{
+margin:0;
+overflow:hidden;
+background:#1b5e20;
+}
+canvas{
+display:block;
+}
 </style>
 </head>
+
 <body>
 
 <canvas id="game"></canvas>
 
 <script>
-const c=document.getElementById("game");
-const ctx=c.getContext("2d");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-function r(){
-  c.width=window.innerWidth;
-  c.height=window.innerHeight;
+// plein écran
+function resize(){
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 }
-r();
-window.addEventListener("resize",r);
+resize();
+window.addEventListener("resize",resize);
 
-let p={x:100,y:100};
-let b={x:130,y:100};
-let owned=true;
-let e=[{x:500,y:200},{x:600,y:300}];
-let score=0;
+// ⚽ joueur
+let player = {x:100,y:200};
 
-let k={};
-document.addEventListener("keydown",a=>k[a.code]=true);
-document.addEventListener("keyup",a=>k[a.code]=false);
+// ⚽ ennemis
+let enemies = [
+{x:500,y:200},
+{x:600,y:300}
+];
 
-function u(){
+// ⚽ balle
+let ball = {x:140,y:200};
 
-if(k["ArrowUp"])p.y-=5;
-if(k["ArrowDown"])p.y+=5;
-if(k["ArrowLeft"])p.x-=5;
-if(k["ArrowRight"])p.x+=5;
+// contrôle
+let keys = {};
+document.addEventListener("keydown",e=>keys[e.code]=true);
+document.addEventListener("keyup",e=>keys[e.code]=false);
 
-if(k["Space"]&&owned){
-owned=false;
-}
-
-if(owned){
-b.x=p.x+10;
-b.y=p.y;
+// 🥅 cage (but)
+function goal(){
+ctx.fillStyle="white";
+ctx.fillRect(canvas.width-30,canvas.height/2-100,20,200);
 }
 
-e.forEach(x=>{
-if(x.x<b.x)x.x+=2;
-if(x.x>b.x)x.x-=2;
-if(x.y<b.y)x.y+=2;
-if(x.y>b.y)x.y-=2;
+// 🎮 update
+function update(){
 
-if(Math.hypot(x.x-b.x,x.y-b.y)<15)owned=false;
+// joueur move
+if(keys["ArrowUp"]) player.y-=5;
+if(keys["ArrowDown"]) player.y+=5;
+if(keys["ArrowLeft"]) player.x-=5;
+if(keys["ArrowRight"]) player.x+=5;
+
+// balle suit joueur
+ball.x = player.x + 15;
+ball.y = player.y + 15;
+
+// ennemis suivent balle
+enemies.forEach(e=>{
+if(e.x < ball.x) e.x += 2;
+if(e.x > ball.x) e.x -= 2;
+if(e.y < ball.y) e.y += 2;
+if(e.y > ball.y) e.y -= 2;
 });
 
-if(b.x<10){
-score++;
-reset();
-}
-
 draw();
-requestAnimationFrame(u);
+requestAnimationFrame(update);
 }
 
-function reset(){
-p={x:100,y:100};
-b={x:130,y:100};
-owned=true;
-}
+// 🎨 joueur style bonhomme
+function drawPlayer(x,y,color){
 
-function draw(){
-ctx.clearRect(0,0,c.width,c.height);
-
-ctx.fillStyle="#2e7d32";
-ctx.fillRect(0,0,c.width,c.height);
-
-ctx.fillStyle="blue";
-ctx.fillRect(p.x,p.y,20,20);
-
-ctx.fillStyle="red";
-e.forEach(x=>ctx.fillRect(x.x,x.y,20,20));
-
-ctx.fillStyle="white";
+// tête
+ctx.fillStyle="#ffcc80";
 ctx.beginPath();
-ctx.arc(b.x,b.y,6,0,Math.PI*2);
+ctx.arc(x,y,8,0,Math.PI*2);
 ctx.fill();
 
-ctx.fillText("Score:"+score,20,30);
+// corps
+ctx.fillStyle=color;
+ctx.fillRect(x-6,y+8,12,20);
+
+// jambes
+ctx.fillStyle="#222";
+ctx.fillRect(x-6,y+28,5,10);
+ctx.fillRect(x+1,y+28,5,10);
 }
 
-u();
+// 🎨 draw
+function draw(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+// terrain
+ctx.fillStyle="#2e7d32";
+ctx.fillRect(0,0,canvas.width,canvas.height);
+
+// cage
+goal();
+
+// joueur
+drawPlayer(player.x,player.y,"blue");
+
+// ennemis
+enemies.forEach(e=>{
+drawPlayer(e.x,e.y,"red");
+});
+
+// balle
+ctx.fillStyle="white";
+ctx.beginPath();
+ctx.arc(ball.x,ball.y,6,0,Math.PI*2);
+ctx.fill();
+
+// ligne terrain
+ctx.strokeStyle="white";
+ctx.beginPath();
+ctx.moveTo(canvas.width/2,0);
+ctx.lineTo(canvas.width/2,canvas.height);
+ctx.stroke();
+
+}
+
+update();
 </script>
 
 </body>
